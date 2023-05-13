@@ -1,6 +1,8 @@
 import os
 from enum import Enum
 
+import pyrootutils
+
 from src.utils.misc import get_eopatches_split_dir
 
 
@@ -42,6 +44,8 @@ def main(eopatches_dir: str, val_size: float, split_type: SplitType):
 
 
 if __name__ == '__main__':
+    pyrootutils.setup_root(__file__, project_root_env_var=True, dotenv=True, pythonpath=True)
+
     eopathces_dir = os.environ['EOPATCHES_DIR']
     val_size = 0.25
     split_type = SplitType.EVERY_NTH

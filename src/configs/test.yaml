@@ -5,6 +5,7 @@ num_workers: 0
 pin_memory: false
 device: cpu
 save_only_one_checkpoint: true
+num_images_to_log: 3
 
 model:
   _target_: segmentation_models_pytorch.Unet

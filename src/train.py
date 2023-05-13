@@ -39,9 +39,10 @@ def run(cfg):
         transform=val_transform
     )
 
+    batch_size = cfg['batch_size']
     train_loader = DataLoader(
         train_dataset,
-        batch_size=cfg['batch_size'],
+        batch_size=batch_size,
         shuffle=True,
         num_workers=cfg['num_workers'],
         pin_memory=cfg['pin_memory']
@@ -49,7 +50,7 @@ def run(cfg):
 
     val_loader = DataLoader(
         val_dataset,
-        batch_size=cfg['batch_size'],
+        batch_size=batch_size,
         shuffle=False,
         num_workers=0,
         pin_memory=cfg['pin_memory']
@@ -67,7 +68,8 @@ def run(cfg):
 
     loss_function = torch.nn.MSELoss()
 
-    wandb_logger = WandBLogger(cfg=cfg, model=model, save_config=True, num_images_to_log=3)
+    num_images_to_log = cfg['num_images_to_log']
+    wandb_logger = WandBLogger(cfg=cfg, model=model, save_config=True, num_images_to_log=num_images_to_log)
 
     train_mse_metric = MeanSquaredError()
     val_mse_metric = MeanSquaredError()
@@ -115,6 +117,9 @@ def run(cfg):
                 f' bandwidth: {(time.time() - step_start) / train_loader.batch_size:.4f}'
             )
             wandb_logger.log_scalar('train/loss', loss.item())
+            if (epoch + 1) % val_interval == 0:
+                if len(train_loader) - step < num_images_to_log // batch_size + 1:
+                    wandb_logger.log_prediction_as_image('image/train', outputs, batch)
 
         if scheduler is not None:
             scheduler.step()
@@ -122,6 +127,7 @@ def run(cfg):
         epoch_loss /= step
         epoch_mse = train_mse_metric.compute().item()
         train_mse_metric.reset()
+        wandb_logger.reset_image_logging()
 
         logging.info(f'epoch {epoch + 1} average loss: {epoch_loss:.4f}, average mse: {epoch_mse:.4f}')
         wandb_logger.log_scalar('train/epoch_loss', epoch_loss)

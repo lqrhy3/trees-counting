@@ -1,13 +1,11 @@
 import os
 from typing import Union
 
-import matplotlib.pyplot as plt
-import numpy as np
 import geopandas as gpd
 from eolearn.core import LoadTask, FeatureType, EOPatch, SaveTask, OverwritePermission, linearly_connect_tasks, \
     EOExecutor, EOWorkflow, EOTask
-from eolearn.features import LinearInterpolationTask
 from eolearn.geometry.transformations import VectorToRasterTask
+from pyrootutils import pyrootutils
 from rasterio.enums import MergeAlg
 from scipy.ndimage import gaussian_filter
 
@@ -104,18 +102,20 @@ def compose_workflow_nodes(
 
 
 if __name__ == '__main__':
+    pyrootutils.setup_root(__file__, project_root_env_var=True, dotenv=True, pythonpath=True)
+
     eopatches_dir = '/home/lqrhy3/PycharmProjects/trees-counting/data/raw/eopatches'
-    # sigma = 0.75
-    # radius = 1
-    #
-    # main(
-    #     eopatches_dir=eopatches_dir,
-    #     sigma=sigma,
-    #     radius=radius
-    # )
-    load_task = LoadTask(eopatches_dir, lazy_loading=True)
-    for eopatch_name in os.listdir(eopatches_dir):
-        eopatch = load_task.execute(eopatch_folder=eopatch_name)
+    sigma = 0.75
+    radius = 1
+
+    main(
+        eopatches_dir=eopatches_dir,
+        sigma=sigma,
+        radius=radius
+    )
+    # load_task = LoadTask(eopatches_dir, lazy_loading=True)
+    # for eopatch_name in os.listdir(eopatches_dir):
+    #     eopatch = load_task.execute(eopatch_folder=eopatch_name)
 
         # plt.figure(figsize=(20, 20))
         # plt.subplot(1, 3, 1)

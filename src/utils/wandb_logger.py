@@ -45,6 +45,8 @@ class WandBLogger:
 
     def log_prediction_as_image(self, name: str, outputs: torch.Tensor, batch: Dict[str, torch.Tensor]):
         num_samples = self.num_images_to_log - self._num_logged_images
+        if num_samples < 1:
+            return
 
         outputs = outputs[:num_samples].detach().cpu().numpy()
         data = batch['data'][:num_samples].detach().cpu()
