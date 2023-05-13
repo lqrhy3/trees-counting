@@ -2,6 +2,7 @@ import os
 from typing import Union
 
 import geopandas as gpd
+import numpy as np
 from eolearn.core import LoadTask, FeatureType, EOPatch, SaveTask, OverwritePermission, linearly_connect_tasks, \
     EOExecutor, EOWorkflow, EOTask
 from eolearn.geometry.transformations import VectorToRasterTask
@@ -32,7 +33,7 @@ class AddTreesDensityDataTask(EOTask):
 class AddNumberOfTreesScalarTask(EOTask):
     def execute(self, eopatch: EOPatch,):
         num_trees = eopatch.mask_timeless['TREES_ANNOTATIONS'].sum()
-        eopatch[FeatureType.SCALAR_TIMELESS, 'NUM_TREES'] = num_trees
+        eopatch[FeatureType.SCALAR_TIMELESS, 'NUM_TREES'] = np.array(num_trees)[None]
         return eopatch
 
 
@@ -41,7 +42,7 @@ def main(
         sigma: Union[int, float],
         radius: int
 ):
-    eopatch_names = os.listdir(eopatches_dir)
+    eopatch_names = os.listdir(eopatches_dir)[:1]
     trees_gdf = read_df_with_coordinates(os.environ['PATH_TO_TREE_LABELS'])
 
     workflow_nodes = compose_workflow_nodes(
