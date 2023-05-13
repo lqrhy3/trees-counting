@@ -1,0 +1,37 @@
+num_epochs: 50
+val_interval: 5
+batch_size: 1
+num_workers: 0
+pin_memory: false
+device: cpu
+save_only_one_checkpoint: true
+
+model:
+  _target_: segmentation_models_pytorch.Unet
+  encoder_name: vgg16_bn
+  encoder_weights: null
+  in_channels: 3
+  activation:
+    _target_: src.utils.misc.get_class
+    obj:
+      _target_: torch.nn.ReLU
+  classes: 1
+
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.0003
+
+scheduler: null
+
+train_transform:
+  _target_: albumentations.Compose
+  transforms:
+    - _target_: albumentations.Normalize
+      max_pixel_value: 1.
+
+val_transform:
+  _target_: albumentations.Compose
+  transforms:
+    - _target_: albumentations.Normalize
+      max_pixel_value: 1.
