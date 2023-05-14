@@ -322,3 +322,5 @@ cython_debug/
 /data/
 /wandb/
 test.py
+/src/data/*-report-*
+setup.sh

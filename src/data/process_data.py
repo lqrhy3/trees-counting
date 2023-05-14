@@ -42,7 +42,7 @@ def main(
         sigma: Union[int, float],
         radius: int
 ):
-    eopatch_names = os.listdir(eopatches_dir)[:1]
+    eopatch_names = os.listdir(eopatches_dir)
     trees_gdf = read_df_with_coordinates(os.environ['PATH_TO_TREE_LABELS'])
 
     workflow_nodes = compose_workflow_nodes(
@@ -105,7 +105,7 @@ def compose_workflow_nodes(
 if __name__ == '__main__':
     pyrootutils.setup_root(__file__, project_root_env_var=True, dotenv=True, pythonpath=True)
 
-    eopatches_dir = '/home/lqrhy3/PycharmProjects/trees-counting/data/raw/eopatches'
+    eopatches_dir = os.environ['EOPATCHES_DIR']
     sigma = 0.75
     radius = 1
 

@@ -77,10 +77,6 @@ def run(cfg):
     best_metric = float('inf')
     best_metric_epoch = -1
 
-    # TODO
-    train_loader_iterator = iter(train_loader)
-    batch = next(train_loader_iterator)
-
     for epoch in range(num_epochs):
         epoch_start = time.time()
         logging.info("-" * 10)
@@ -89,14 +85,12 @@ def run(cfg):
         model.train()
         epoch_loss = 0
 
-        # TODO
-        # train_loader_iterator = iter(train_loader)
+        train_loader_iterator = iter(train_loader)
 
         for step in range(1, len(train_loader) + 1):
             step_start = time.time()
 
-            # TODO
-            # batch = next(train_loader_iterator)
+            batch = next(train_loader_iterator)
             inputs, labels = (
                 batch['data'].to(device),
                 batch['density_map'].to(device),
@@ -142,8 +136,7 @@ def run(cfg):
                 val_loader_iterator = iter(val_loader)
 
                 for i in range(len(val_loader)):
-                    # TODO
-                    val_batch = batch  # next(val_loader_iterator)
+                    val_batch = next(val_loader_iterator)
                     val_inputs, val_labels = (
                         val_batch['data'].to(device),
                         val_batch['density_map'].to(device),
