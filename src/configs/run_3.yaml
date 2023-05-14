@@ -33,12 +33,7 @@ optimizer:
   lr: 0.0003
   weight_decay: 0.05
 
-scheduler:
-  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
-  _partial_: true
-  mode: min
-  factor: 0.5
-  patience: 100
+scheduler: null
 
 train_transform:
   _target_: albumentations.Compose
