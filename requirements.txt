@@ -1,0 +1,11 @@
+python-dotenv
+geopandas
+eo-learn
+sentinelsat
+pyrootutils
+hydra-core
+typer
+torchmetrics
+albumentations
+wandb
+segmentation_models_pytorch
