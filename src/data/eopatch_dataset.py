@@ -64,11 +64,24 @@ class EOPatchDataset(Dataset):
 
 
 if __name__ == '__main__':
-    d = EOPatchDataset('/home/lqrhy3/PycharmProjects/trees-counting/data/raw/eopatches')
-    for i in range(3):
+    from omegaconf import OmegaConf
+    from dotenv import load_dotenv
+    import hydra
+
+    load_dotenv()
+    cfg = OmegaConf.load('/home/lqrhy3/PycharmProjects/trees-counting/src/configs/run_2.yaml')
+    transform = hydra.utils.instantiate(cfg['train_transform'])
+
+    d = EOPatchDataset(
+        eopatches_dir=os.environ['EOPATCHES_DIR'],
+        split='train',
+        transform=transform
+    )
+
+    for i in [0, 0, 0, 0, 0, 0, 0]:
         sample = d[i]
         plt.subplot(1, 2, 1)
-        plt.imshow(sample['data'])
+        plt.imshow(sample['data'].permute(1, 2, 0))
         plt.subplot(1, 2, 2)
-        plt.imshow(sample['density_map'])
+        plt.imshow(sample['density_map'][0])
         plt.show()
