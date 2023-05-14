@@ -19,14 +19,26 @@ model:
   classes: 1
 
 loss:
-  _target_: torch.nn.MSELoss
+  _target_: src.utils.composite_loss.CompositeLoss
+  losses:
+    - _target_: torch.nn.MSELoss
+    - _target_: torchgeometry.losses.SSIM
+      window_size: 5
+      reduction: mean
+  weights: [0.9, 0.1]
 
 optimizer:
-  _target_: torch.optim.Adam
+  _target_: torch.optim.AdamW
   _partial_: true
   lr: 0.0003
+  weight_decay: 0.05
 
-scheduler: null
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.5
+  patience: 100
 
 train_transform:
   _target_: albumentations.Compose
@@ -37,6 +49,11 @@ train_transform:
       p: 0.75
     - _target_: albumentations.RandomRotate90
       p: 0.5
+    - _target_: albumentations.ShiftScaleRotate
+      shift_limit: 0.2
+      scale_limit: 0.
+      rotate_limit: 0
+      p: 0.9
 
 val_transform:
   _target_: albumentations.Compose

@@ -9,3 +9,4 @@ torchmetrics
 albumentations
 wandb
 segmentation_models_pytorch
+torchgeometry

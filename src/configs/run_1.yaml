@@ -18,6 +18,9 @@ model:
       _target_: torch.nn.ReLU
   classes: 1
 
+loss:
+  _target_: torch.nn.MSELoss
+
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true

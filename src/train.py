@@ -66,7 +66,7 @@ def run(cfg):
 
     scheduler = hydra.utils.instantiate(cfg['scheduler'])
 
-    loss_function = torch.nn.MSELoss()
+    loss_function = hydra.utils.instantiate(cfg['loss'])
 
     num_images_to_log = cfg['num_images_to_log']
     wandb_logger = WandBLogger(cfg=cfg, model=model, save_config=True, num_images_to_log=num_images_to_log)

@@ -69,7 +69,7 @@ if __name__ == '__main__':
     import hydra
 
     load_dotenv()
-    cfg = OmegaConf.load('/home/lqrhy3/PycharmProjects/trees-counting/src/configs/run_2.yaml')
+    cfg = OmegaConf.load('/home/lqrhy3/PycharmProjects/trees-counting/src/configs/run_3.yaml')
     transform = hydra.utils.instantiate(cfg['train_transform'])
 
     d = EOPatchDataset(
