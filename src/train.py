@@ -71,8 +71,8 @@ def run(cfg):
     num_images_to_log = cfg['num_images_to_log']
     wandb_logger = WandBLogger(cfg=cfg, model=model, save_config=True, num_images_to_log=num_images_to_log)
 
-    train_mse_metric = MeanSquaredError()
-    val_mse_metric = MeanSquaredError()
+    train_mse_metric = MeanSquaredError().to(device)
+    val_mse_metric = MeanSquaredError().to(device)
 
     best_metric = float('inf')
     best_metric_epoch = -1
@@ -172,7 +172,7 @@ def run(cfg):
     wandb_logger.finish()
 
 
-def main(config_name: str = typer.Option('test.yaml', metavar='--config-name')):
+def main(config_name: str = typer.Option('test.yaml', metavar='--config_name')):
     pyrootutils.setup_root(
         __file__,
         indicator='.project-root',

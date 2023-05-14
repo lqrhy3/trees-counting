@@ -4,6 +4,7 @@ from typing import List, Union
 
 import geopandas as gpd
 import numpy as np
+from dotenv import load_dotenv
 from eolearn.core import EOTask, EOPatch, FeatureType, SaveTask, OverwritePermission, linearly_connect_tasks, EOWorkflow, EOExecutor
 from matplotlib import pyplot as plt
 from sentinelhub import UtmZoneSplitter, DataCollection
@@ -116,12 +117,15 @@ def compose_workflow_nodes(
 
     return workflow_nodes
 
+
 if __name__ == '__main__':
+    load_dotenv()
+
     bbox_size = 128
     band_names = ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B11", "B12"]
     maxcc = 0.1
     time_interval = '2017-08-01'
-    eopatches_dir = '/home/lqrhy3/PycharmProjects/trees-counting/data/raw/eopatches'
+    eopatches_dir = os.environ['EOPATCHES_DIR']
     max_threads = 3
 
     main(

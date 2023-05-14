@@ -103,7 +103,7 @@ def compose_workflow_nodes(
 
 
 if __name__ == '__main__':
-    pyrootutils.setup_root(__file__, project_root_env_var=True, dotenv=True, pythonpath=True)
+    pyrootutils.setup_root(__file__, project_root_env_var=True, dotenv=True)
 
     eopatches_dir = os.environ['EOPATCHES_DIR']
     sigma = 0.75
