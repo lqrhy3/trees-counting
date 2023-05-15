@@ -13,6 +13,8 @@ from shapely.geometry import shape
 from eolearn.io import SentinelHubInputTask
 
 RESOLUTION = 10
+BAND_NAMES = ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B11", "B12"]
+BBOX_SIZE = 128
 
 
 class AddValidityMaskTask(EOTask):
@@ -121,8 +123,6 @@ def compose_workflow_nodes(
 if __name__ == '__main__':
     load_dotenv()
 
-    bbox_size = 128
-    band_names = ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B11", "B12"]
     maxcc = 0.1
     time_interval = '2017-08-01'
     eopatches_dir = os.environ['EOPATCHES_DIR']
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     main(
         bbox_size=bbox_size,
-        band_names=band_names,
+        band_names=BAND_NAMES,
         maxcc=maxcc,
         time_interval=time_interval,
         eopatches_dir=eopatches_dir,

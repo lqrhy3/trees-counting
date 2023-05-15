@@ -31,12 +31,16 @@ def run(cfg):
     train_dataset = EOPatchDataset(
         eopatches_dir=os.environ['EOPATCHES_DIR'],
         split='train',
+        band_names_to_take=cfg['band_names_to_take'],
+        to_take_ndvi=cfg['to_take_ndvi'],
         transform=train_transform
     )
 
     val_dataset = EOPatchDataset(
         eopatches_dir=os.environ['EOPATCHES_DIR'],
         split='val',
+        band_names_to_take=cfg['band_names_to_take'],
+        to_take_ndvi=cfg['to_take_ndvi'],
         transform=val_transform
     )
 

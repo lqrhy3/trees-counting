@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 import torch
@@ -9,6 +9,7 @@ from torch.utils.data import Dataset
 import albumentations as albu
 
 from src.utils.misc import get_eopatches_split_dir
+from src.data.get_data import BAND_NAMES
 
 
 class EOPatchDataset(Dataset):
@@ -16,9 +17,13 @@ class EOPatchDataset(Dataset):
             self,
             eopatches_dir: str,
             split: Optional[str],
+            band_names_to_take: List[str],
+            to_take_ndvi: bool,
             transform: albu.Compose
     ):
         self.eopatches_dir = eopatches_dir
+        self.band_names_to_take = band_names_to_take
+        self.to_take_ndvi = to_take_ndvi
         self.transform = transform
 
         if split:
@@ -34,6 +39,7 @@ class EOPatchDataset(Dataset):
             ]
 
         self.eopatch_names = eopatch_names
+        self.band_idxs_to_take = [BAND_NAMES.index(band_name) for band_name in self.band_names_to_take]
 
     def __getitem__(self, idx: int):
         eopatch_name = self.eopatch_names[idx]
@@ -41,8 +47,12 @@ class EOPatchDataset(Dataset):
 
         eopatch = EOPatch.load(path_to_eopatch, lazy_loading=True)
 
-        data = eopatch.data['L2A_BANDS'][0][:, :, [3, 2, 1]]  # [H, W, 3]
+        data = eopatch.data['L2A_BANDS'][0][:, :, self.band_idxs_to_take]  # [H, W, Nb]
         data = np.clip(data, 0., 1.)
+        if self.to_take_ndvi:
+            ndvi = eopatch.data['NDVI'][0]
+            data = np.concatenate([data, ndvi], axis=-1)  # [H, W, Nb+1]
+
         density_map = eopatch.data_timeless['TREES_DENSITY']  # [H, W, 1]
         del eopatch
 

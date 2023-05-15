@@ -49,7 +49,7 @@ class WandBLogger:
             return
 
         outputs = outputs[:num_samples].detach().cpu().numpy()
-        data = batch['data'][:num_samples].detach().cpu()
+        data = batch['data'][:num_samples, :3].detach().cpu()
         data = denormalize_imagenet(data).numpy()
         tgt_density_maps = batch['density_map'][:num_samples].detach().cpu().numpy()
 
@@ -57,8 +57,9 @@ class WandBLogger:
 
         for i in range(len(outputs)):
             tgt_density_map_i = tgt_density_maps[i, 0]
-            max_density_value = tgt_density_map_i.max()
-            max_density_value = max_density_value if max_density_value > 0 else 1.
+            # max_density_value = tgt_density_map_i.max()
+            # max_density_value = max_density_value if max_density_value > 0 else 1.
+            max_density_value = 1.
 
             output_i = outputs[i, 0]
             output_i = (output_i / max_density_value * 255).astype(np.uint8)

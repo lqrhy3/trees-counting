@@ -16,6 +16,9 @@ class ModelCheckpointer:
         os.makedirs(self.checkpoints_dir, exist_ok=True)
 
     def __call__(self, value, epoch, model, optimizer, scheduler):
+        if self._to_skip():
+            return
+
         if len(self._top_k_checkpoints) < self.save_top_k:
             checkpoint_name = f'best_epoch_{epoch:04d}.pth'
             self._top_k_checkpoints.append((value, checkpoint_name))
@@ -68,3 +71,6 @@ class ModelCheckpointer:
                 scheduler=scheduler,
                 save_only_one=False
             )
+
+    def _to_skip(self):
+        return self.save_top_k == 0 and not self.save_last

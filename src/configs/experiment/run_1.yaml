@@ -4,8 +4,13 @@ batch_size: 64
 num_workers: 8
 pin_memory: true
 device: cuda
+
+band_names_to_take: [B04, B03, B02]
+to_take_ndvi: false
+
 save_top_k_checkpoints: 1
 save_last_checkpoint: false
+
 num_images_to_log: 15
 
 model:

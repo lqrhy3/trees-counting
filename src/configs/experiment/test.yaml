@@ -4,15 +4,20 @@ batch_size: 1
 num_workers: 0
 pin_memory: false
 device: cpu
-save_top_k_checkpoints: 2
-save_last_checkpoint: true
+
+band_names_to_take: [B04, B03, B02]
+to_take_ndvi: true
+
+save_top_k_checkpoints: 0
+save_last_checkpoint: false
+
 num_images_to_log: 3
 
 model:
   _target_: segmentation_models_pytorch.Unet
   encoder_name: vgg16_bn
   encoder_weights: null
-  in_channels: 3
+  in_channels: 4
   activation:
     _target_: src.utils.misc.get_class
     obj:
@@ -39,6 +44,8 @@ train_transform:
   _target_: albumentations.Compose
   transforms:
     - _target_: albumentations.Normalize
+      mean: [0.485, 0.456, 0.406, 0.0]
+      std: [0.229, 0.224, 0.225, 1.0]
       max_pixel_value: 1.
     - _target_: albumentations.Flip
       p: 0.75
@@ -54,4 +61,6 @@ val_transform:
   _target_: albumentations.Compose
   transforms:
     - _target_: albumentations.Normalize
+      mean: [ 0.485, 0.456, 0.406, 0.0 ]
+      std: [ 0.229, 0.224, 0.225, 1.0 ]
       max_pixel_value: 1.

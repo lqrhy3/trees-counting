@@ -5,12 +5,14 @@ import geopandas as gpd
 import numpy as np
 from eolearn.core import LoadTask, FeatureType, EOPatch, SaveTask, OverwritePermission, linearly_connect_tasks, \
     EOExecutor, EOWorkflow, EOTask
+from eolearn.features import NormalizedDifferenceIndexTask
 from eolearn.geometry.transformations import VectorToRasterTask
 from pyrootutils import pyrootutils
 from rasterio.enums import MergeAlg
 from scipy.ndimage import gaussian_filter
 
 from src.utils.misc import read_df_with_coordinates
+from src.data.get_data import BAND_NAMES
 
 
 class AddTreesDensityDataTask(EOTask):
@@ -40,7 +42,8 @@ class AddNumberOfTreesScalarTask(EOTask):
 def main(
         eopatches_dir: str,
         sigma: Union[int, float],
-        radius: int
+        radius: int,
+        only_ndvi_task: bool = False
 ):
     eopatch_names = os.listdir(eopatches_dir)
     trees_gdf = read_df_with_coordinates(os.environ['PATH_TO_TREE_LABELS'])
@@ -49,7 +52,8 @@ def main(
         eopatches_dir=eopatches_dir,
         trees_gdf=trees_gdf,
         sigma=sigma,
-        radius=radius
+        radius=radius,
+        only_ndvi_task=only_ndvi_task
     )
 
     load_node = workflow_nodes[0]
@@ -81,9 +85,15 @@ def compose_workflow_nodes(
         eopatches_dir: str,
         trees_gdf: gpd.GeoDataFrame,
         sigma: Union[int, float],
-        radius: int
+        radius: int,
+        only_ndvi_task: bool
 ):
     load_task = LoadTask(path=eopatches_dir)
+    add_ndvi_task = NormalizedDifferenceIndexTask(
+        input_feature=(FeatureType.DATA, 'L2A_BANDS'),
+        output_feature=(FeatureType.DATA, 'NDVI'),
+        bands=(BAND_NAMES.index("B08"), BAND_NAMES.index("B04"))
+    )
     add_trees_annotations_task = VectorToRasterTask(
         vector_input=trees_gdf,
         raster_feature=(FeatureType.MASK_TIMELESS, 'TREES_ANNOTATIONS'),
@@ -97,7 +107,10 @@ def compose_workflow_nodes(
     add_num_trees_task = AddNumberOfTreesScalarTask()
     save_task = SaveTask(path=eopatches_dir, overwrite_permission=OverwritePermission.OVERWRITE_FEATURES)
 
-    tasks = [load_task, add_trees_annotations_task, add_trees_density_task, add_num_trees_task, save_task]
+    tasks = [load_task, add_ndvi_task, add_trees_annotations_task, add_trees_density_task, add_num_trees_task, save_task]
+    if only_ndvi_task:
+        tasks = [load_task, add_ndvi_task, save_task]
+
     workflow_nodes = linearly_connect_tasks(*tasks)
     return workflow_nodes
 
@@ -108,11 +121,13 @@ if __name__ == '__main__':
     eopatches_dir = os.environ['EOPATCHES_DIR']
     sigma = 0.75
     radius = 1
+    only_ndvi_task = False
 
     main(
         eopatches_dir=eopatches_dir,
         sigma=sigma,
-        radius=radius
+        radius=radius,
+        only_ndvi_task=only_ndvi_task
     )
     # load_task = LoadTask(eopatches_dir, lazy_loading=True)
     # for eopatch_name in os.listdir(eopatches_dir):
