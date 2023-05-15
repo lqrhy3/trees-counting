@@ -57,7 +57,7 @@ class ModelCheckpointer:
             logging.info(f'saved new top-{self.save_top_k} best metric model.')
 
         if self.save_last:
-            checkpoint_pths_to_delete = glob.yglob(os.path.join(self.checkpoints_dir, 'last_*'))
+            checkpoint_pths_to_delete = glob.glob(os.path.join(self.checkpoints_dir, 'last_*'))
             for checkpoint_pth_to_delete in checkpoint_pths_to_delete:
                 os.remove(checkpoint_pth_to_delete)
 
