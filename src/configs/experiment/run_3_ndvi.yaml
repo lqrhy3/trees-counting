@@ -17,7 +17,7 @@ model:
   _target_: segmentation_models_pytorch.Unet
   encoder_name: vgg16_bn
   encoder_weights: imagenet
-  in_channels: 3
+  in_channels: 4
   activation:
     _target_: src.utils.misc.get_class
     obj:
