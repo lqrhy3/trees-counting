@@ -1,16 +1,17 @@
-num_epochs: 50
-val_interval: 5
-batch_size: 1
-num_workers: 0
-pin_memory: false
-device: cpu
-save_only_one_checkpoint: true
-num_images_to_log: 3
+num_epochs: 3000
+val_interval: 100
+batch_size: 64
+num_workers: 8
+pin_memory: true
+device: cuda
+save_top_k_checkpoints: 1
+save_last_checkpoint: false
+num_images_to_log: 10
 
 model:
   _target_: segmentation_models_pytorch.Unet
   encoder_name: vgg16_bn
-  encoder_weights: null
+  encoder_weights: imagenet
   in_channels: 3
   activation:
     _target_: src.utils.misc.get_class
@@ -28,9 +29,10 @@ loss:
   weights: [0.9, 0.1]
 
 optimizer:
-  _target_: torch.optim.Adam
+  _target_: torch.optim.AdamW
   _partial_: true
   lr: 0.0003
+  weight_decay: 0.05
 
 scheduler: null
 
@@ -44,7 +46,7 @@ train_transform:
     - _target_: albumentations.RandomRotate90
       p: 0.5
     - _target_: albumentations.ShiftScaleRotate
-      shift_limit: 0.1
+      shift_limit: 0.2
       scale_limit: 0.
       rotate_limit: 0
       p: 0.9

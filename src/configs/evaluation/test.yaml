@@ -1,0 +1,4 @@
+artefacts_dir: /home/lqrhy3/PycharmProjects/trees-counting/artefacts/run_3
+checkpoint_name: epoch_099.pt
+device: cpu
+pin_memory: false

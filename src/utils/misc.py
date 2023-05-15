@@ -54,23 +54,23 @@ def denormalize_imagenet(image: torch.Tensor):
 def save_checkpoint(
         model: torch.nn.Module,
         epoch: int,
-        artefacts_dir: str,
+        checkpoints_dir: str,
+        checkpoint_name: str,
         optimizer: Optional[Optimizer] = None,
         scheduler=None,
         save_only_one: bool = False
 ):
     state_dict = model.state_dict()
-    save_dict = {'epoch': epoch, "state_dict": state_dict}
+    save_dict = {'epoch': epoch, 'state_dict': state_dict}
     if optimizer is not None:
         save_dict['optimizer'] = optimizer.state_dict()
     if scheduler is not None:
         save_dict['scheduler'] = scheduler.state_dict()
 
-    checkpoints_dir = os.path.join(artefacts_dir, 'checkpoints')
     if not os.path.exists(checkpoints_dir):
         os.makedirs(checkpoints_dir)
 
-    checkpoint_pth = os.path.join(checkpoints_dir, f'epoch_{epoch:04d}.pt')
+    checkpoint_pth = os.path.join(checkpoints_dir, checkpoint_name)
 
     other_checkpoint_names = []
     if save_only_one:

@@ -1,11 +1,12 @@
-num_epochs: 3000
-val_interval: 100
+num_epochs: 5000
+val_interval: 50
 batch_size: 64
 num_workers: 8
 pin_memory: true
 device: cuda
-save_only_one_checkpoint: true
-num_images_to_log: 10
+save_top_k_checkpoints: 1
+save_last_checkpoint: false
+num_images_to_log: 15
 
 model:
   _target_: segmentation_models_pytorch.Unet
@@ -33,10 +34,6 @@ train_transform:
   transforms:
     - _target_: albumentations.Normalize
       max_pixel_value: 1.
-    - _target_: albumentations.Flip
-      p: 0.75
-    - _target_: albumentations.RandomRotate90
-      p: 0.5
 
 val_transform:
   _target_: albumentations.Compose

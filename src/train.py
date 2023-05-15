@@ -17,6 +17,7 @@ from torchmetrics import MeanSquaredError
 from src.data.eopatch_dataset import EOPatchDataset
 from src.utils.misc import save_checkpoint, seed_everything
 from src.utils.wandb_logger import WandBLogger
+from src.utils.model_checkpointer import ModelCheckpointer
 
 
 def run(cfg):
@@ -74,6 +75,11 @@ def run(cfg):
     train_mse_metric = MeanSquaredError().to(device)
     val_mse_metric = MeanSquaredError().to(device)
 
+    model_checkpointer = ModelCheckpointer(
+        checkpoints_dir=os.path.join(artefacts_dir, 'checkpoints'),
+        save_top_k=cfg['save_top_k_checkpoints'],
+        save_last=cfg['save_last_checkpoint']
+    )
     best_metric = float('inf')
     best_metric_epoch = -1
 
@@ -153,9 +159,10 @@ def run(cfg):
                 if val_mse < best_metric:
                     best_metric = val_mse
                     best_metric_epoch = epoch + 1
+                #     save_checkpoint(model, epoch, artefacts_dir, optimizer, scheduler, cfg['save_only_one_checkpoint'])
+                #     logging.info('saved new best metric model')
 
-                    save_checkpoint(model, epoch, artefacts_dir, optimizer, scheduler, cfg['save_only_one_checkpoint'])
-                    logging.info('saved new best metric model')
+                model_checkpointer(val_mse, epoch, model, optimizer, scheduler)
 
                 logging.info(
                     f'current epoch: {epoch + 1},'
@@ -172,7 +179,7 @@ def run(cfg):
     wandb_logger.finish()
 
 
-def main(config_name: str = typer.Option('test.yaml', metavar='--config_name')):
+def main(config_name: str = typer.Option('test.yaml')):
     pyrootutils.setup_root(
         __file__,
         indicator='.project-root',
@@ -182,7 +189,7 @@ def main(config_name: str = typer.Option('test.yaml', metavar='--config_name')):
         cwd=False
     )
 
-    cfg_pth = os.path.join(os.environ['PROJECT_ROOT'], 'src', 'configs', config_name)
+    cfg_pth = os.path.join(os.environ['PROJECT_ROOT'], 'src', 'configs', 'experiment', config_name)
     cfg = OmegaConf.load(cfg_pth)
     cfg = OmegaConf.to_container(cfg, resolve=True)
 
@@ -197,7 +204,6 @@ def main(config_name: str = typer.Option('test.yaml', metavar='--config_name')):
             now = datetime.now().strftime("%m-%d_%H-%M-%S")
             artefacts_dir = '_'.join([artefacts_dir, now])
 
-    os.makedirs(os.path.join(artefacts_dir, 'logs'))
     os.makedirs(os.path.join(artefacts_dir, 'checkpoints'))
 
     cfg['artefacts_dir'] = artefacts_dir
@@ -208,7 +214,7 @@ def main(config_name: str = typer.Option('test.yaml', metavar='--config_name')):
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
         handlers=[
-            logging.FileHandler(os.path.join(cfg['artefacts_dir'], 'logs', 'log.log')),
+            logging.FileHandler(os.path.join(cfg['artefacts_dir'], 'log.log')),
             logging.StreamHandler(sys.stdout)
         ]
     )
