@@ -129,7 +129,7 @@ if __name__ == '__main__':
     max_threads = 3
 
     main(
-        bbox_size=bbox_size,
+        bbox_size=BBOX_SIZE,
         band_names=BAND_NAMES,
         maxcc=maxcc,
         time_interval=time_interval,
