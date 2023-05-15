@@ -59,7 +59,8 @@ def main(
     load_node = workflow_nodes[0]
     save_node = workflow_nodes[-1]
     execution_args = []
-    for eopatch_name in eopatch_names:
+    # for eopatch_name in eopatch_names:
+    for eopatch_name in ['eopatch_0223']:
         execution_args.append(
             {
                 load_node: {'eopatch_folder': eopatch_name},
@@ -92,7 +93,8 @@ def compose_workflow_nodes(
     add_ndvi_task = NormalizedDifferenceIndexTask(
         input_feature=(FeatureType.DATA, 'L2A_BANDS'),
         output_feature=(FeatureType.DATA, 'NDVI'),
-        bands=(BAND_NAMES.index("B08"), BAND_NAMES.index("B04"))
+        bands=(BAND_NAMES.index("B08"), BAND_NAMES.index("B04")),
+        undefined_value=0.
     )
     add_trees_annotations_task = VectorToRasterTask(
         vector_input=trees_gdf,
