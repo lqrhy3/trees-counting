@@ -59,8 +59,7 @@ def main(
     load_node = workflow_nodes[0]
     save_node = workflow_nodes[-1]
     execution_args = []
-    # for eopatch_name in eopatch_names:
-    for eopatch_name in ['eopatch_0223']:
+    for eopatch_name in eopatch_names:
         execution_args.append(
             {
                 load_node: {'eopatch_folder': eopatch_name},
