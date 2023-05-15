@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 from torch.utils.data import Dataset
 import albumentations as albu
 
-from src.utils.misc import get_eopatches_split_dir
+from src.utils.misc import get_eopatches_split_dir, denormalize_imagenet
 from src.data.get_data import BAND_NAMES
 
 
@@ -19,11 +19,14 @@ class EOPatchDataset(Dataset):
             split: Optional[str],
             band_names_to_take: List[str],
             to_take_ndvi: bool,
-            transform: albu.Compose
+            scale_rgb_intensity: Optional[float] = None,
+            transform: Optional[albu.Compose] = None
     ):
         self.eopatches_dir = eopatches_dir
         self.band_names_to_take = band_names_to_take
         self.to_take_ndvi = to_take_ndvi
+        self.scale_rgb_intensity = scale_rgb_intensity
+
         self.transform = transform
 
         if split:
@@ -48,6 +51,9 @@ class EOPatchDataset(Dataset):
         eopatch = EOPatch.load(path_to_eopatch, lazy_loading=True)
 
         data = eopatch.data['L2A_BANDS'][0][:, :, self.band_idxs_to_take]  # [H, W, Nb]
+        if self.scale_rgb_intensity:
+            data[:, :, :3] *= self.scale_rgb_intensity
+
         data = np.clip(data, 0., 1.)
         if self.to_take_ndvi:
             ndvi = eopatch.data['NDVI'][0]
@@ -79,19 +85,29 @@ if __name__ == '__main__':
     import hydra
 
     load_dotenv()
-    cfg = OmegaConf.load('/src/configs/experiment/run_3.yaml')
+    cfg = OmegaConf.load('../configs/experiment/run_3_ndvi.yaml')
     transform = hydra.utils.instantiate(cfg['train_transform'])
 
     d = EOPatchDataset(
         eopatches_dir=os.environ['EOPATCHES_DIR'],
         split='train',
-        transform=transform
+        # transform=transform,
+        transform=None,
+        band_names_to_take=['B04', 'B03', 'B02', 'B08'],
+        # band_names_to_take=['B08'],
+        to_take_ndvi=False
     )
 
-    for i in [0, 0, 0, 0, 0, 0, 0]:
+    # for i in [0, 0, 0, 0, 0, 0, 0]:
+    for i in range(10):
         sample = d[i]
+        data = sample['data']
+        # print(data[3].min(), data[3].mean(), data[3].max())
+        print(data[0].min(), data[0].mean(), data[0].max())
+        # continue
         plt.subplot(1, 2, 1)
-        plt.imshow(sample['data'].permute(1, 2, 0))
+        # plt.imshow(denormalize_imagenet(sample['data'][:3]).permute(1, 2, 0) * 2.5)
+        plt.imshow(sample['data'][:3].permute(1, 2, 0) * 2.5)
         plt.subplot(1, 2, 2)
-        plt.imshow(sample['density_map'][0])
+        plt.imshow(sample['data'][3])
         plt.show()
