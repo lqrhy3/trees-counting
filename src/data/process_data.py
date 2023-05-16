@@ -3,11 +3,11 @@ from typing import Union
 
 import geopandas as gpd
 import numpy as np
+import pyrootutils
 from eolearn.core import LoadTask, FeatureType, EOPatch, SaveTask, OverwritePermission, linearly_connect_tasks, \
     EOExecutor, EOWorkflow, EOTask
 from eolearn.features import NormalizedDifferenceIndexTask
 from eolearn.geometry.transformations import VectorToRasterTask
-from pyrootutils import pyrootutils
 from rasterio.enums import MergeAlg
 from scipy.ndimage import gaussian_filter
 
@@ -117,7 +117,7 @@ def compose_workflow_nodes(
 
 
 if __name__ == '__main__':
-    pyrootutils.setup_root(__file__, project_root_env_var=True, dotenv=True)
+    pyrootutils.setup_root(__file__, project_root_env_var=True, dotenv=True, pythonpath=True)
 
     eopatches_dir = os.environ['EOPATCHES_DIR']
     sigma = 0.75

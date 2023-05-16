@@ -4,7 +4,7 @@ from typing import List, Union
 
 import geopandas as gpd
 import numpy as np
-from dotenv import load_dotenv
+import pyrootutils
 from eolearn.core import EOTask, EOPatch, FeatureType, SaveTask, OverwritePermission, linearly_connect_tasks, EOWorkflow, EOExecutor
 from matplotlib import pyplot as plt
 from sentinelhub import UtmZoneSplitter, DataCollection
@@ -121,7 +121,7 @@ def compose_workflow_nodes(
 
 
 if __name__ == '__main__':
-    load_dotenv()
+    pyrootutils.setup_root(__file__, project_root_env_var=True, dotenv=True, pythonpath=True)
 
     maxcc = 0.1
     time_interval = '2017-08-01'
