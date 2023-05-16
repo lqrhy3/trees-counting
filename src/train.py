@@ -83,7 +83,9 @@ def run(cfg):
     # val_mse_metric = MeanSquaredError().to(device)
 
     train_composite_metric = CompositeMetric(
-        density_metrics={'train/mse': MeanSquaredError().to(device)},
+        density_metrics={
+            'train/mse': MeanSquaredError().to(device)
+        },
         tree_count_metrics={
             'train/cnt_mae': MeanAbsoluteError().to(device),
             'train/cnt_mape': MeanAbsolutePercentageError().to(device)
@@ -91,9 +93,12 @@ def run(cfg):
     )
 
     val_composite_metric = CompositeMetric(
-        density_metrics={'val/mse': MeanSquaredError().to(device)},
+        density_metrics={
+            'val/mse': MeanSquaredError().to(device)
+        },
         tree_count_metrics={
-            'val/cnt_mae': MeanAbsoluteError().to(device), 'val/cnt_mape': MeanAbsolutePercentageError().to(device)
+            'val/cnt_mae': MeanAbsoluteError().to(device),
+            'val/cnt_mape': MeanAbsolutePercentageError().to(device)
         }
     )
 
@@ -131,7 +136,7 @@ def run(cfg):
             optimizer.step()
 
             pred_tree_counts = outputs.sum(dim=(1, 2, 3))
-            tgt_tree_counts = batch['tree_count']
+            tgt_tree_counts = batch['tree_count'].to(device)
             train_composite_metric(outputs, targets, pred_tree_counts, tgt_tree_counts)
             # mse = train_mse_metric(outputs, targets)
 
@@ -176,7 +181,7 @@ def run(cfg):
                     val_outputs = model(val_inputs)
 
                     val_pred_tree_counts = val_outputs.sum(dim=(1, 2, 3))
-                    val_tgt_tree_counts = val_batch['tree_count']
+                    val_tgt_tree_counts = val_batch['tree_count'].to(device)
                     val_composite_metric(val_outputs, val_targets, val_pred_tree_counts, val_tgt_tree_counts)
                     # val_mse_metric(val_outputs, val_targets)
                     wandb_logger.log_prediction_as_image('image/val', val_outputs, val_pred_tree_counts, val_batch)
