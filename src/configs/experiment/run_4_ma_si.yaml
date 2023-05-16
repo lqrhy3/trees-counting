@@ -7,7 +7,7 @@ device: cuda
 
 band_names_to_take: [B04, B03, B02, B08, B11]
 to_take_ndvi: true
-scale_rgb_intensity: true
+scale_rgb_intensity: 2.5
 
 save_top_k_checkpoints: 5
 save_last_checkpoint: true
