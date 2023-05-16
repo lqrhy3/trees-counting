@@ -43,7 +43,13 @@ class WandBLogger:
     def log_scalar(self, name: str, value: float, commit: Optional[bool] = None):
         self.log({name: value}, commit=commit)
 
-    def log_prediction_as_image(self, name: str, outputs: torch.Tensor, batch: Dict[str, torch.Tensor]):
+    def log_prediction_as_image(
+            self,
+            name: str,
+            outputs: torch.Tensor,
+            pred_counts: torch.Tensor,
+            batch: Dict[str, torch.Tensor]
+    ):
         num_samples = self.num_images_to_log - self._num_logged_images
         if num_samples < 1:
             return
@@ -52,6 +58,8 @@ class WandBLogger:
         data = batch['data'][:num_samples, :3].detach().cpu()
         data = denormalize_imagenet(data).numpy()
         tgt_density_maps = batch['density_map'][:num_samples].detach().cpu().numpy()
+        pred_counts = pred_counts[:num_samples].detach().cpu().numpy()
+        tgt_counts = batch['tree_count'][:num_samples].cpu().numpy()
 
         self._num_logged_images += len(outputs)
 
@@ -75,7 +83,7 @@ class WandBLogger:
             image = np.concatenate([output_i, data_i, tgt_density_map_i], axis=1)
             image = wandb.Image(
                 image,
-                caption='prediction vs target'
+                caption=f'pred_count={pred_counts[i]:.1f}; tgt_count={tgt_counts[i]:.1f}'
             )
 
             self.log({name: image})

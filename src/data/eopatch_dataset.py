@@ -20,12 +20,14 @@ class EOPatchDataset(Dataset):
             band_names_to_take: List[str],
             to_take_ndvi: bool,
             scale_rgb_intensity: Optional[float] = None,
+            scale_density: Optional[float] = None,
             transform: Optional[albu.Compose] = None
     ):
         self.eopatches_dir = eopatches_dir
         self.band_names_to_take = band_names_to_take
         self.to_take_ndvi = to_take_ndvi
         self.scale_rgb_intensity = scale_rgb_intensity
+        self.scale_density = scale_density
 
         self.transform = transform
 
@@ -60,6 +62,8 @@ class EOPatchDataset(Dataset):
             data = np.concatenate([data, ndvi], axis=-1)  # [H, W, Nb+1]
 
         density_map = eopatch.data_timeless['TREES_DENSITY']  # [H, W, 1]
+        if self.scale_density:
+            density_map *= self.scale_density
         del eopatch
 
         if self.transform is not None:
@@ -67,12 +71,16 @@ class EOPatchDataset(Dataset):
             data = transformed['image']
             density_map = transformed['mask']
 
+        tree_count = density_map.sum()
+
         data = torch.tensor(data, dtype=torch.float32).permute(2, 0, 1)
         density_map = torch.tensor(density_map, dtype=torch.float32).permute(2, 0, 1)
+        tree_count = torch.tensor(tree_count, dtype=torch.float32)
 
         sample = dict()
         sample['data'] = data
         sample['density_map'] = density_map
+        sample['tree_count'] = tree_count
         return sample
 
     def __len__(self):
@@ -85,17 +93,16 @@ if __name__ == '__main__':
     import hydra
 
     load_dotenv()
-    cfg = OmegaConf.load('../configs/experiment/run_3_ndvi.yaml')
+    cfg = OmegaConf.load('../configs/experiment/run_3_ndvi_ir_co_ds.yaml')
     transform = hydra.utils.instantiate(cfg['train_transform'])
 
     d = EOPatchDataset(
         eopatches_dir=os.environ['EOPATCHES_DIR'],
         split='train',
-        # transform=transform,
-        transform=None,
-        band_names_to_take=['B04', 'B03', 'B02', 'B08'],
-        # band_names_to_take=['B08'],
-        to_take_ndvi=False
+        transform=transform,
+        # transform=None,
+        band_names_to_take=cfg['band_names_to_take'],
+        to_take_ndvi=cfg['to_take_ndvi']
     )
 
     # for i in [0, 0, 0, 0, 0, 0, 0]:
@@ -106,8 +113,8 @@ if __name__ == '__main__':
         print(data[0].min(), data[0].mean(), data[0].max())
         # continue
         plt.subplot(1, 2, 1)
-        # plt.imshow(denormalize_imagenet(sample['data'][:3]).permute(1, 2, 0) * 2.5)
-        plt.imshow(sample['data'][:3].permute(1, 2, 0) * 2.5)
+        plt.imshow(denormalize_imagenet(sample['data'][:3]).permute(1, 2, 0) * 2.5)
+        # plt.imshow(sample['data'][:3].permute(1, 2, 0) * 2.5)
         plt.subplot(1, 2, 2)
-        plt.imshow(sample['data'][3])
+        plt.imshow(np.clip(sample['density_map'][0, :, :], 0, 1))
         plt.show()

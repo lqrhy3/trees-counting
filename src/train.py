@@ -12,9 +12,10 @@ import torch
 import typer
 from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
-from torchmetrics import MeanSquaredError
+from torchmetrics import MeanSquaredError, MeanAbsoluteError, MeanAbsolutePercentageError
 
 from src.data.eopatch_dataset import EOPatchDataset
+from src.utils.composite_metric import CompositeMetric
 from src.utils.misc import save_checkpoint, seed_everything
 from src.utils.wandb_logger import WandBLogger
 from src.utils.model_checkpointer import ModelCheckpointer
@@ -33,6 +34,7 @@ def run(cfg):
         split='train',
         band_names_to_take=cfg['band_names_to_take'],
         to_take_ndvi=cfg['to_take_ndvi'],
+        scale_rgb_intensity=cfg['scale_rgb_intensity'],
         transform=train_transform
     )
 
@@ -41,6 +43,7 @@ def run(cfg):
         split='val',
         band_names_to_take=cfg['band_names_to_take'],
         to_take_ndvi=cfg['to_take_ndvi'],
+        scale_rgb_intensity=cfg['scale_rgb_intensity'],
         transform=val_transform
     )
 
@@ -76,8 +79,23 @@ def run(cfg):
     num_images_to_log = cfg['num_images_to_log']
     wandb_logger = WandBLogger(cfg=cfg, model=model, save_config=True, num_images_to_log=num_images_to_log)
 
-    train_mse_metric = MeanSquaredError().to(device)
-    val_mse_metric = MeanSquaredError().to(device)
+    # train_mse_metric = MeanSquaredError().to(device)
+    # val_mse_metric = MeanSquaredError().to(device)
+
+    train_composite_metric = CompositeMetric(
+        density_metrics={'train/mse': MeanSquaredError().to(device)},
+        tree_count_metrics={
+            'train/cnt_mae': MeanAbsoluteError().to(device),
+            'train/cnt_mape': MeanAbsolutePercentageError().to(device)
+        }
+    )
+
+    val_composite_metric = CompositeMetric(
+        density_metrics={'val/mse': MeanSquaredError().to(device)},
+        tree_count_metrics={
+            'val/cnt_mae': MeanAbsoluteError().to(device), 'val/cnt_mape': MeanAbsolutePercentageError().to(device)
+        }
+    )
 
     model_checkpointer = ModelCheckpointer(
         checkpoints_dir=os.path.join(artefacts_dir, 'checkpoints'),
@@ -101,41 +119,44 @@ def run(cfg):
             step_start = time.time()
 
             batch = next(train_loader_iterator)
-            inputs, labels = (
+            inputs, targets = (
                 batch['data'].to(device),
                 batch['density_map'].to(device),
             )
 
             optimizer.zero_grad()
             outputs = model(inputs)
-            loss = loss_function(outputs, labels)
+            loss = loss_function(outputs, targets)
             loss.backward()
             optimizer.step()
 
-            mse = train_mse_metric(outputs, labels)
+            pred_tree_counts = outputs.sum(dim=(1, 2, 3))
+            tgt_tree_counts = batch['tree_count']
+            train_composite_metric(outputs, targets, pred_tree_counts, tgt_tree_counts)
+            # mse = train_mse_metric(outputs, targets)
 
             epoch_loss += loss.item()
             epoch_len = math.ceil(len(train_dataset) / train_loader.batch_size)
             logging.info(
-                f'{step}/{epoch_len}, train_loss: {loss.item():.4f}, train_mse: {mse:.4f},'
+                f'[{step}/{epoch_len}] train_loss: {loss.item():.4f},'
                 f' bandwidth: {(time.time() - step_start) / train_loader.batch_size:.4f}'
             )
             wandb_logger.log_scalar('train/loss', loss.item())
             if (epoch + 1) % val_interval == 0:
                 if len(train_loader) - step < num_images_to_log // batch_size + 1:
-                    wandb_logger.log_prediction_as_image('image/train', outputs, batch)
+                    wandb_logger.log_prediction_as_image('image/train', outputs, pred_tree_counts, batch)
 
         if scheduler is not None:
             scheduler.step()
 
         epoch_loss /= step
-        epoch_mse = train_mse_metric.compute().item()
-        train_mse_metric.reset()
+        density_metric_values, tree_count_metric_values = train_composite_metric.compute()
+        train_composite_metric.reset()
         wandb_logger.reset_image_logging()
 
-        logging.info(f'epoch {epoch + 1} average loss: {epoch_loss:.4f}, average mse: {epoch_mse:.4f}')
+        logging.info(f'epoch {epoch + 1} average loss: {epoch_loss:.4f}')#, average mse: {epoch_mse:.4f}')
         wandb_logger.log_scalar('train/epoch_loss', epoch_loss)
-        wandb_logger.log_scalar('train/epoch_mse', epoch_mse)
+        wandb_logger.log({**density_metric_values, **tree_count_metric_values})
 
         current_lr = scheduler.get_lr()[0] if scheduler else optimizer.param_groups[0]['lr']
         wandb_logger.log_scalar('train/lr', current_lr)
@@ -147,19 +168,25 @@ def run(cfg):
 
                 for i in range(len(val_loader)):
                     val_batch = next(val_loader_iterator)
-                    val_inputs, val_labels = (
+                    val_inputs, val_targets = (
                         val_batch['data'].to(device),
                         val_batch['density_map'].to(device),
                     )
 
                     val_outputs = model(val_inputs)
-                    val_mse_metric(val_outputs, val_labels)
-                    wandb_logger.log_prediction_as_image('image/val', val_outputs, val_batch)
+
+                    val_pred_tree_counts = val_outputs.sum(dim=(1, 2, 3))
+                    val_tgt_tree_counts = val_batch['tree_count']
+                    val_composite_metric(val_outputs, val_targets, val_pred_tree_counts, val_tgt_tree_counts)
+                    # val_mse_metric(val_outputs, val_targets)
+                    wandb_logger.log_prediction_as_image('image/val', val_outputs, val_pred_tree_counts, val_batch)
 
                 wandb_logger.reset_image_logging()
-                val_mse = val_mse_metric.compute().item()
-                val_mse_metric.reset()
+                val_density_metric_values, val_tree_count_metric_values = val_composite_metric.compute()
+                val_composite_metric.reset()
+                # val_mse_metric.reset()
 
+                val_mse = val_density_metric_values['val/mse']
                 if val_mse < best_metric:
                     best_metric = val_mse
                     best_metric_epoch = epoch + 1
@@ -174,7 +201,8 @@ def run(cfg):
                     f' best mse: {best_metric:.4f}'
                     f' at epoch: {best_metric_epoch}'
                 )
-                wandb_logger.log_scalar('val/mse', val_mse)
+                # wandb_logger.log_scalar('val/mse', val_mse)
+                wandb_logger.log({**val_density_metric_values, **val_tree_count_metric_values})
 
         logging.info(
             f'time consuming of epoch {epoch + 1} is:'
