@@ -21,14 +21,14 @@ class AddTreesDensityDataTask(EOTask):
         self.radius = radius
 
     def execute(self, eopatch: EOPatch):
-        trees_annotations = eopatch[FeatureType.MASK_TIMELESS, 'TREES_ANNOTATIONS']  # [H, W, 1]
+        trees_annotations = eopatch[FeatureType.MASK_TIMELESS, 'TREES_ANNOTATIONS'][:, :, 0]  # [H, W]
         trees_density = gaussian_filter(
             trees_annotations.astype(float),
             mode='constant',
             sigma=self.sigma,
             radius=self.radius
-        )
-        eopatch[FeatureType.DATA_TIMELESS, 'TREES_DENSITY'] = trees_density
+        )  # [H, W]
+        eopatch[FeatureType.DATA_TIMELESS, 'TREES_DENSITY'] = trees_density[:, :, None]  # [H, W, 1]
         return eopatch
 
 
