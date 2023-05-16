@@ -1,6 +1,7 @@
 import os
 from typing import Union
 
+import cv2.aruco
 import geopandas as gpd
 import numpy as np
 import pyrootutils
@@ -10,6 +11,7 @@ from eolearn.features import NormalizedDifferenceIndexTask
 from eolearn.geometry.transformations import VectorToRasterTask
 from rasterio.enums import MergeAlg
 from scipy.ndimage import gaussian_filter
+from pyproj import CRS
 
 from src.utils.misc import read_df_with_coordinates
 from src.data.get_data import BAND_NAMES
@@ -33,9 +35,23 @@ class AddTreesDensityDataTask(EOTask):
 
 
 class AddNumberOfTreesScalarTask(EOTask):
-    def execute(self, eopatch: EOPatch,):
+    def execute(self, eopatch: EOPatch):
         num_trees = eopatch.mask_timeless['TREES_ANNOTATIONS'].sum()
         eopatch[FeatureType.SCALAR_TIMELESS, 'NUM_TREES'] = np.array(num_trees)[None]
+        return eopatch
+
+
+class DilateStreetMaskTask(EOTask):
+    def __init__(self, kernel_size):
+        self.kernel_size = kernel_size
+
+    def execute(self, eopatch: EOPatch):
+        street_mask = eopatch.mask_timeless['STREET_MASK']  # [H, W, 1]
+        street_mask = (street_mask * 255).astype(np.uint8)
+        kernel = np.ones((self.kernel_size, self.kernel_size), dtype=np.uint8)
+        dilated_street_mask = cv2.dilate(street_mask, kernel, iterations=1)
+        dilated_street_mask = (dilated_street_mask / 255).astype(int)
+        eopatch[(FeatureType.MASK_TIMELESS, 'STREET_MASK')] = dilated_street_mask[:, :, None]  # [H, W, 1]
         return eopatch
 
 
@@ -43,16 +59,20 @@ def main(
         eopatches_dir: str,
         sigma: Union[int, float],
         radius: int,
+        kernel_size: int,
         only_ndvi_task: bool = False
 ):
     eopatch_names = os.listdir(eopatches_dir)
     trees_gdf = read_df_with_coordinates(os.environ['PATH_TO_TREE_LABELS'])
+    streets_gdf = read_streets_gdf()
 
     workflow_nodes = compose_workflow_nodes(
         eopatches_dir=eopatches_dir,
         trees_gdf=trees_gdf,
         sigma=sigma,
         radius=radius,
+        streets_gdf=streets_gdf,
+        kernel_size=kernel_size,
         only_ndvi_task=only_ndvi_task
     )
 
@@ -80,12 +100,18 @@ def main(
             f"For more info check report at {executor.get_report_path()}"
         )
 
+def read_streets_gdf():
+    streets_gdf = gpd.read_file(os.environ['PATH_TO_STREETS'])
+    streets_gdf = streets_gdf.to_crs(CRS.from_epsg(4326))
+    return streets_gdf
 
 def compose_workflow_nodes(
         eopatches_dir: str,
         trees_gdf: gpd.GeoDataFrame,
         sigma: Union[int, float],
         radius: int,
+        streets_gdf: gpd.GeoDataFrame,
+        kernel_size: int,
         only_ndvi_task: bool
 ):
     load_task = LoadTask(path=eopatches_dir)
@@ -106,9 +132,29 @@ def compose_workflow_nodes(
     )
     add_trees_density_task = AddTreesDensityDataTask(sigma=sigma, radius=radius)
     add_num_trees_task = AddNumberOfTreesScalarTask()
+    add_street_mask_task = VectorToRasterTask(
+        vector_input=streets_gdf,
+        raster_feature=(FeatureType.MASK_TIMELESS, 'STREET_MASK'),
+        values=1,
+        raster_shape=(128, 128),
+        raster_dtype=int,
+        no_data_value=0,
+        merge_alg=MergeAlg.replace
+    )
+    dilate_street_mask_task = DilateStreetMaskTask(kernel_size=kernel_size)
+
     save_task = SaveTask(path=eopatches_dir, overwrite_permission=OverwritePermission.OVERWRITE_FEATURES)
 
-    tasks = [load_task, add_ndvi_task, add_trees_annotations_task, add_trees_density_task, add_num_trees_task, save_task]
+    tasks = [
+        load_task,
+        add_ndvi_task,
+        add_trees_annotations_task,
+        add_trees_density_task,
+        add_num_trees_task,
+        add_street_mask_task,
+        dilate_street_mask_task,
+        save_task
+    ]
     if only_ndvi_task:
         tasks = [load_task, add_ndvi_task, save_task]
 
@@ -122,12 +168,14 @@ if __name__ == '__main__':
     eopatches_dir = os.environ['EOPATCHES_DIR']
     sigma = 0.75
     radius = 1
+    kernel_size = 4
     only_ndvi_task = False
 
     main(
         eopatches_dir=eopatches_dir,
         sigma=sigma,
         radius=radius,
+        kernel_size=kernel_size,
         only_ndvi_task=only_ndvi_task
     )
     # load_task = LoadTask(eopatches_dir, lazy_loading=True)

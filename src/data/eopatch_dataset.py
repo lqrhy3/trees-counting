@@ -21,6 +21,7 @@ class EOPatchDataset(Dataset):
             to_take_ndvi: bool,
             scale_rgb_intensity: Optional[float] = None,
             scale_density: Optional[float] = None,
+            mask_data: Optional[float] = None,
             transform: Optional[albu.Compose] = None
     ):
         self.eopatches_dir = eopatches_dir
@@ -28,6 +29,7 @@ class EOPatchDataset(Dataset):
         self.to_take_ndvi = to_take_ndvi
         self.scale_rgb_intensity = scale_rgb_intensity
         self.scale_density = scale_density
+        self.mask_data = mask_data
 
         self.transform = transform
 
@@ -64,6 +66,11 @@ class EOPatchDataset(Dataset):
         density_map = eopatch.data_timeless['TREES_DENSITY']  # [H, W, 1]
         if self.scale_density:
             density_map *= self.scale_density
+
+        street_mask = eopatch.mask_timeless['STREET_MASK']  # [H, W, 1]
+        if self.mask_data:
+            data *= street_mask
+
         del eopatch
 
         if self.transform is not None:
@@ -81,6 +88,7 @@ class EOPatchDataset(Dataset):
         sample['data'] = data
         sample['density_map'] = density_map
         sample['tree_count'] = tree_count
+        sample['street_mask'] = street_mask
         return sample
 
     def __len__(self):
@@ -102,7 +110,8 @@ if __name__ == '__main__':
         transform=transform,
         # transform=None,
         band_names_to_take=cfg['band_names_to_take'],
-        to_take_ndvi=cfg['to_take_ndvi']
+        to_take_ndvi=cfg['to_take_ndvi'],
+        mask_data=True
     )
 
     # for i in [0, 0, 0, 0, 0, 0, 0]:

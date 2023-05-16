@@ -1,5 +1,5 @@
-num_epochs: 10
-val_interval: 2
+num_epochs: 500
+val_interval: 20
 batch_size: 1
 num_workers: 0
 pin_memory: false
@@ -7,6 +7,8 @@ device: cpu
 
 band_names_to_take: [B04, B03, B02, B08, B11]
 to_take_ndvi: true
+scale_rgb_intensity: null
+mask_data: null
 
 save_top_k_checkpoints: 0
 save_last_checkpoint: false
