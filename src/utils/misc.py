@@ -1,6 +1,6 @@
 import os
 import random
-from typing import Optional
+from typing import Optional, Dict
 
 import geopandas as gpd
 import numpy as np
@@ -8,6 +8,7 @@ import pandas as pd
 import pyproj
 import torch
 from matplotlib import pyplot as plt
+from torch import Tensor
 from torch.optim import Optimizer
 
 
@@ -80,6 +81,13 @@ def save_checkpoint(
     if other_checkpoint_names:
         for other_checkpoint_name in other_checkpoint_names:
             os.remove(os.path.join(checkpoints_dir, other_checkpoint_name))
+
+
+def move_batch_to_device(batch: Dict[str, Tensor], device: torch.device):
+    for key, value in batch.items():
+        if isinstance(value, Tensor):
+            batch[key] = value.to(device)
+    return batch
 
 
 def load_checkpoint(model, path_to_checkpoint, device, optimizer=None):

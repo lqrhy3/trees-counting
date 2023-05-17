@@ -16,7 +16,7 @@ from torchmetrics import MeanSquaredError, MeanAbsoluteError, MeanAbsolutePercen
 
 from src.data.eopatch_dataset import EOPatchDataset
 from src.utils.composite_metric import CompositeMetric
-from src.utils.misc import seed_everything
+from src.utils.misc import seed_everything, move_batch_to_device
 from src.utils.wandb_logger import WandBLogger
 from src.utils.model_checkpointer import ModelCheckpointer
 
@@ -26,28 +26,33 @@ def run(cfg):
     val_interval = cfg['val_interval']
     artefacts_dir = cfg['artefacts_dir']
 
-    train_transform = hydra.utils.instantiate(cfg['train_transform'])
-    val_transform = hydra.utils.instantiate(cfg['val_transform'])
+    if 'train_dataset' in cfg:
+        train_dataset = hydra.utils.instantiate(cfg['train_dataset'])
+    else:
+        train_transform = hydra.utils.instantiate(cfg['train_transform'])
+        train_dataset = EOPatchDataset(
+            eopatches_dir=os.environ['EOPATCHES_DIR'],
+            split='train',
+            band_names_to_take=cfg['band_names_to_take'],
+            to_take_ndvi=cfg['to_take_ndvi'],
+            scale_rgb_intensity=cfg['scale_rgb_intensity'],
+            mask_data=cfg['mask_data'],
+            transform=train_transform
+        )
 
-    train_dataset = EOPatchDataset(
-        eopatches_dir=os.environ['EOPATCHES_DIR'],
-        split='train',
-        band_names_to_take=cfg['band_names_to_take'],
-        to_take_ndvi=cfg['to_take_ndvi'],
-        scale_rgb_intensity=cfg['scale_rgb_intensity'],
-        mask_data=cfg['mask_data'],
-        transform=train_transform
-    )
-
-    val_dataset = EOPatchDataset(
-        eopatches_dir=os.environ['EOPATCHES_DIR'],
-        split='val',
-        band_names_to_take=cfg['band_names_to_take'],
-        to_take_ndvi=cfg['to_take_ndvi'],
-        scale_rgb_intensity=cfg['scale_rgb_intensity'],
-        mask_data=cfg['mask_data'],
-        transform=val_transform
-    )
+    if 'val_dataset' in cfg:
+        val_dataset = hydra.utils.instantiate(cfg['val_dataset'])
+    else:
+        val_transform = hydra.utils.instantiate(cfg['val_transform'])
+        val_dataset = EOPatchDataset(
+            eopatches_dir=os.environ['EOPATCHES_DIR'],
+            split='val',
+            band_names_to_take=cfg['band_names_to_take'],
+            to_take_ndvi=cfg['to_take_ndvi'],
+            scale_rgb_intensity=cfg['scale_rgb_intensity'],
+            mask_data=cfg['mask_data'],
+            transform=val_transform
+        )
 
     batch_size = cfg['batch_size']
     train_loader = DataLoader(
@@ -123,21 +128,24 @@ def run(cfg):
             step_start = time.time()
 
             batch = next(train_loader_iterator)
+            batch = move_batch_to_device(batch, device)
             inputs, targets = (
-                batch['data'].to(device),
-                batch['density_map'].to(device),
+                batch['data'],
+                batch['density_map']
             )
 
             optimizer.zero_grad()
             outputs = model(inputs)
-            loss = loss_function(outputs, targets)
+            loss = loss_function(outputs, batch)
             loss.backward()
             optimizer.step()
 
+            if cfg['loss'].get('use_street_mask'):
+                outputs = outputs.detach() * batch['street_mask']
+
             pred_tree_counts = outputs.sum(dim=(1, 2, 3))
-            tgt_tree_counts = batch['tree_count'].to(device)
+            tgt_tree_counts = batch['tree_count']
             train_composite_metric(outputs, targets, pred_tree_counts, tgt_tree_counts)
-            # mse = train_mse_metric(outputs, targets)
 
             epoch_loss += loss.item()
             epoch_len = math.ceil(len(train_dataset) / train_loader.batch_size)
@@ -178,6 +186,8 @@ def run(cfg):
                     )
 
                     val_outputs = model(val_inputs)
+                    if cfg['loss'].get('use_street_mask'):
+                        val_outputs *= val_batch['street_mask']
 
                     val_pred_tree_counts = val_outputs.sum(dim=(1, 2, 3))
                     val_tgt_tree_counts = val_batch['tree_count'].to(device)

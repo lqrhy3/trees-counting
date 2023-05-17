@@ -74,15 +74,17 @@ class EOPatchDataset(Dataset):
         del eopatch
 
         if self.transform is not None:
-            transformed = self.transform(image=data, mask=density_map)
+            transformed = self.transform(image=data, masks=[density_map, street_mask])
             data = transformed['image']
-            density_map = transformed['mask']
+            density_map = transformed['masks'][0]
+            street_mask = transformed['masks'][1]
 
         tree_count = density_map.sum()
 
         data = torch.tensor(data, dtype=torch.float32).permute(2, 0, 1)
         density_map = torch.tensor(density_map, dtype=torch.float32).permute(2, 0, 1)
         tree_count = torch.tensor(tree_count, dtype=torch.float32)
+        street_mask = torch.tensor(street_mask, dtype=torch.bool).permute(2, 0, 1)
 
         sample = dict()
         sample['data'] = data
