@@ -95,11 +95,10 @@ train_dataset:
         fill_value: 0
         mask_fill_value: 0
 
-  normalization_transform:
-    _target_: albumentations.Normalize
-    mean: [ 0.485, 0.456, 0.406, 0.5, 0.5, 0.0 ]
-    std: [ 0.229, 0.224, 0.225, 1.0, 1.0, 1.0 ]
-    max_pixel_value: 1.
+      - _target_: albumentations.Normalize
+        mean: [ 0.485, 0.456, 0.406, 0.5, 0.5, 0.0 ]
+        std: [ 0.229, 0.224, 0.225, 1.0, 1.0, 1.0 ]
+        max_pixel_value: 1.
 
 val_dataset:
   _target_: src.data.eopatch_dataset.EOPatchDataset
@@ -109,9 +108,10 @@ val_dataset:
   to_take_ndvi: ${to_take_ndvi}
   scale_rgb_intensity: false
   mask_data: true
-  transform: null
-  normalization_transform:
-    _target_: albumentations.Normalize
-    mean: [ 0.485, 0.456, 0.406, 0.5, 0.5, 0.0 ]
-    std: [ 0.229, 0.224, 0.225, 1.0, 1.0, 1.0 ]
-    max_pixel_value: 1.
+  transform:
+    _target_: albumentations.Compose
+    transforms:
+      - _target_: albumentations.Normalize
+        mean: [ 0.485, 0.456, 0.406, 0.5, 0.5, 0.0 ]
+        std: [ 0.229, 0.224, 0.225, 1.0, 1.0, 1.0 ]
+        max_pixel_value: 1.

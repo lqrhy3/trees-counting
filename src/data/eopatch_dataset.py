@@ -22,7 +22,8 @@ class EOPatchDataset(Dataset):
             scale_rgb_intensity: Optional[float] = None,
             scale_density: Optional[float] = None,
             mask_data: Optional[float] = None,
-            transform: Optional[albu.Compose] = None
+            transform: Optional[albu.Compose] = None,
+            normalization_transform: Optional[albu.ImageOnlyTransform] = None
     ):
         self.eopatches_dir = eopatches_dir
         self.band_names_to_take = band_names_to_take
@@ -32,6 +33,7 @@ class EOPatchDataset(Dataset):
         self.mask_data = mask_data
 
         self.transform = transform
+        self.normalization_transform = normalization_transform
 
         if split:
             eopatches_split_dir = get_eopatches_split_dir(eopatches_dir)
@@ -79,6 +81,10 @@ class EOPatchDataset(Dataset):
         if self.mask_data:
             data *= street_mask
 
+        if self.normalization_transform is not None:
+            transformed = self.normalization_transform(image=data)
+            data = transformed['image']
+
         tree_count = density_map.sum()
 
         data = torch.tensor(data, dtype=torch.float32).permute(2, 0, 1)
@@ -103,18 +109,8 @@ if __name__ == '__main__':
     import hydra
 
     load_dotenv()
-    cfg = OmegaConf.load('../configs/experiment/run_3_ndvi_ir_co_ds.yaml')
-    transform = hydra.utils.instantiate(cfg['train_transform'])
-
-    d = EOPatchDataset(
-        eopatches_dir=os.environ['EOPATCHES_DIR'],
-        split='train',
-        transform=transform,
-        # transform=None,
-        band_names_to_take=cfg['band_names_to_take'],
-        to_take_ndvi=cfg['to_take_ndvi'],
-        mask_data=True
-    )
+    cfg = OmegaConf.load('../configs/experiment/run_5_yama.yaml')
+    d = hydra.utils.instantiate(cfg['train_dataset'])
 
     # for i in [0, 0, 0, 0, 0, 0, 0]:
     for i in range(10):
