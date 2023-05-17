@@ -29,7 +29,7 @@ loss:
   use_street_mask: true
   losses:
     - _target_: torch.nn.MSELoss
-      reduction: null
+      reduction: none
   weights: [1.]
 
 optimizer:
