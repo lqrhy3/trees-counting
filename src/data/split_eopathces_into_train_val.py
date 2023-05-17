@@ -15,6 +15,7 @@ def main(eopatches_dir: str, val_size: float, split_type: SplitType):
             x for x in os.listdir(eopatches_dir)
             if os.path.isdir(os.path.join(eopatches_dir, x))
         ]
+    eopatch_names = sorted(eopatch_names)
 
     num_eopathces = len(eopatch_names)
 
@@ -47,7 +48,7 @@ if __name__ == '__main__':
     pyrootutils.setup_root(__file__, project_root_env_var=True, dotenv=True, pythonpath=True)
 
     eopathces_dir = os.environ['EOPATCHES_DIR']
-    val_size = 0.25
+    val_size = 0.15
     split_type = SplitType.EVERY_NTH
 
     main(

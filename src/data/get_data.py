@@ -1,13 +1,14 @@
 import datetime
 import os
-from typing import List, Union
+from typing import List, Union, Tuple
 
 import geopandas as gpd
 import numpy as np
 import pyrootutils
 from eolearn.core import EOTask, EOPatch, FeatureType, SaveTask, OverwritePermission, linearly_connect_tasks, EOWorkflow, EOExecutor
+from eolearn.features import LinearInterpolationTask
 from matplotlib import pyplot as plt
-from sentinelhub import UtmZoneSplitter, DataCollection
+from sentinelhub import UtmZoneSplitter, DataCollection, get_area_dates
 from sentinelsat import read_geojson
 from shapely.geometry import shape
 from eolearn.io import SentinelHubInputTask
@@ -43,6 +44,7 @@ def main(
         band_names: List[str],
         maxcc: float,
         time_interval: Union[str, tuple],
+        resample_range: Tuple[str],
         eopatches_dir: str,
         max_threads: int
 ):
@@ -51,14 +53,15 @@ def main(
         band_names=band_names,
         maxcc=maxcc,
         max_threads=max_threads,
-        eopatches_dir=eopatches_dir
+        eopatches_dir=eopatches_dir,
+        resample_range=resample_range
     )
 
     input_node = workflow_nodes[0]
     save_node = workflow_nodes[-1]
     execution_args = []
     for idx, bbox in enumerate(bboxes):
-        # if idx not in [101, 110, 100, 109]:
+        # if idx not in [256]:
         #     continue
         execution_args.append(
             {
@@ -96,7 +99,8 @@ def compose_workflow_nodes(
         band_names: List[str],
         maxcc: float,
         max_threads: int,
-        eopatches_dir: str
+        eopatches_dir: str,
+        resample_range: str,
 ):
     input_task = SentinelHubInputTask(
         data_collection=DataCollection.SENTINEL2_L2A,
@@ -110,11 +114,18 @@ def compose_workflow_nodes(
     )
 
     add_validity_mask_task = AddValidityMaskTask(mask_name='IS_VALID')
-    add_valid_coverage_scalar_task = AddValidCoverageScalarTask(scalar_name='VC')
+    linear_interpolation_task = LinearInterpolationTask(
+        (FeatureType.DATA, 'L2A_BANDS'),
+        mask_feature=(FeatureType.MASK, 'IS_VALID'),
+        resample_range=resample_range
+    )
     save_task = SaveTask(eopatches_dir, overwrite_permission=OverwritePermission.OVERWRITE_PATCH)
 
     workflow_nodes = linearly_connect_tasks(
-        input_task, add_validity_mask_task, add_valid_coverage_scalar_task, save_task
+        input_task,
+        add_validity_mask_task,
+        linear_interpolation_task,
+        save_task
     )
 
     return workflow_nodes
@@ -124,7 +135,8 @@ if __name__ == '__main__':
     pyrootutils.setup_root(__file__, project_root_env_var=True, dotenv=True, pythonpath=True)
 
     maxcc = 0.1
-    time_interval = '2017-08-01'
+    time_interval = ('2017-08-15', '2017-08-27')
+    resample_range = ('2017-08-24',)
     eopatches_dir = os.environ['EOPATCHES_DIR']
     max_threads = 3
 
@@ -133,6 +145,7 @@ if __name__ == '__main__':
         band_names=BAND_NAMES,
         maxcc=maxcc,
         time_interval=time_interval,
+        resample_range=resample_range,
         eopatches_dir=eopatches_dir,
         max_threads=max_threads
     )

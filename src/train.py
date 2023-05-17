@@ -151,7 +151,7 @@ def run(cfg):
             epoch_len = math.ceil(len(train_dataset) / train_loader.batch_size)
             logging.info(
                 f'[{step}/{epoch_len}] train_loss: {loss.item():.4f},'
-                f' bandwidth: {(time.time() - step_start) / train_loader.batch_size:.4f}'
+                f' bandwidth: {train_loader.batch_size / (time.time() - step_start):.4f}'
             )
             wandb_logger.log_scalar('train/loss', loss.item())
             if (epoch + 1) % val_interval == 0:

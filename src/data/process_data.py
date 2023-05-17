@@ -46,12 +46,12 @@ class DilateStreetMaskTask(EOTask):
         self.kernel_size = kernel_size
 
     def execute(self, eopatch: EOPatch):
-        street_mask = eopatch.mask_timeless['STREET_MASK']  # [H, W, 1]
-        street_mask = (street_mask * 255).astype(np.uint8)
+        street_geometry = eopatch.mask_timeless['STREET_GEOMETRY']  # [H, W, 1]
+        street_geometry = (street_geometry * 255).astype(np.uint8)
         kernel = np.ones((self.kernel_size, self.kernel_size), dtype=np.uint8)
-        dilated_street_mask = cv2.dilate(street_mask, kernel, iterations=1)
-        dilated_street_mask = (dilated_street_mask / 255).astype(int)
-        eopatch[(FeatureType.MASK_TIMELESS, 'STREET_MASK')] = dilated_street_mask[:, :, None]  # [H, W, 1]
+        street_mask = cv2.dilate(street_geometry, kernel, iterations=1)
+        street_mask = (street_mask / 255).astype(int)
+        eopatch[(FeatureType.MASK_TIMELESS, 'STREET_MASK')] = street_mask[:, :, None]  # [H, W, 1]
         return eopatch
 
 
@@ -100,10 +100,12 @@ def main(
             f"For more info check report at {executor.get_report_path()}"
         )
 
+
 def read_streets_gdf():
     streets_gdf = gpd.read_file(os.environ['PATH_TO_STREETS'])
     streets_gdf = streets_gdf.to_crs(CRS.from_epsg(4326))
     return streets_gdf
+
 
 def compose_workflow_nodes(
         eopatches_dir: str,
@@ -134,7 +136,7 @@ def compose_workflow_nodes(
     add_num_trees_task = AddNumberOfTreesScalarTask()
     add_street_mask_task = VectorToRasterTask(
         vector_input=streets_gdf,
-        raster_feature=(FeatureType.MASK_TIMELESS, 'STREET_MASK'),
+        raster_feature=(FeatureType.MASK_TIMELESS, 'STREET_GEOMETRY'),
         values=1,
         raster_shape=(128, 128),
         raster_dtype=int,
@@ -168,7 +170,7 @@ if __name__ == '__main__':
     eopatches_dir = os.environ['EOPATCHES_DIR']
     sigma = 0.75
     radius = 1
-    kernel_size = 4
+    kernel_size = 5
     only_ndvi_task = False
 
     main(
