@@ -172,6 +172,7 @@ def run(cfg):
 
         current_lr = scheduler.get_lr()[0] if scheduler else optimizer.param_groups[0]['lr']
         wandb_logger.log_scalar('train/lr', current_lr)
+        wandb_logger.log_scalar('epoch', epoch)
 
         if (epoch + 1) % val_interval == 0:
             model.eval()

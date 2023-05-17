@@ -20,7 +20,7 @@ class ModelCheckpointer:
             return
 
         if len(self._top_k_checkpoints) < self.save_top_k:
-            checkpoint_name = f'best_epoch_{epoch:04d}.pth'
+            checkpoint_name = f'best_epoch_{epoch:04d}_value_{value:.4f}.pth'
             self._top_k_checkpoints.append((value, checkpoint_name))
             self._top_k_checkpoints.sort(key=lambda key: key[0])
 
@@ -37,7 +37,7 @@ class ModelCheckpointer:
             logging.info(f'saved new top-{self.save_top_k} best metric model.')
 
         elif value < max(self._top_k_checkpoints, key=lambda key: key[0])[0]:
-            checkpoint_name = f'best_epoch_{epoch:04d}.pth'
+            checkpoint_name = f'best_epoch_{epoch:04d}_value_{value:.4f}.pth'
             _, checkpoint_name_to_delete = self._top_k_checkpoints.pop()
             os.remove(os.path.join(self.checkpoints_dir, checkpoint_name_to_delete))
 
