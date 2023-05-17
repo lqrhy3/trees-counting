@@ -8,7 +8,7 @@ import pyrootutils
 from eolearn.core import EOTask, EOPatch, FeatureType, SaveTask, OverwritePermission, linearly_connect_tasks, EOWorkflow, EOExecutor
 from eolearn.features import LinearInterpolationTask
 from matplotlib import pyplot as plt
-from sentinelhub import UtmZoneSplitter, DataCollection, get_area_dates
+from sentinelhub import UtmZoneSplitter, DataCollection, get_area_dates, MosaickingOrder
 from sentinelsat import read_geojson
 from shapely.geometry import shape
 from eolearn.io import SentinelHubInputTask
@@ -44,7 +44,6 @@ def main(
         band_names: List[str],
         maxcc: float,
         time_interval: Union[str, tuple],
-        resample_range: Tuple[str],
         eopatches_dir: str,
         max_threads: int
 ):
@@ -54,15 +53,12 @@ def main(
         maxcc=maxcc,
         max_threads=max_threads,
         eopatches_dir=eopatches_dir,
-        resample_range=resample_range
     )
 
     input_node = workflow_nodes[0]
     save_node = workflow_nodes[-1]
     execution_args = []
     for idx, bbox in enumerate(bboxes):
-        # if idx not in [256]:
-        #     continue
         execution_args.append(
             {
                 input_node: {'bbox': bbox, 'time_interval': time_interval},
@@ -100,7 +96,6 @@ def compose_workflow_nodes(
         maxcc: float,
         max_threads: int,
         eopatches_dir: str,
-        resample_range: str,
 ):
     input_task = SentinelHubInputTask(
         data_collection=DataCollection.SENTINEL2_L2A,
@@ -109,22 +104,17 @@ def compose_workflow_nodes(
         additional_data=[(FeatureType.MASK, 'dataMask', 'IS_DATA'), (FeatureType.MASK, 'CLM')],
         resolution=RESOLUTION,
         maxcc=maxcc,
-        time_difference=datetime.timedelta(hours=12),
+        single_scene=True,
+        mosaicking_order=MosaickingOrder.LEAST_CC,
         max_threads=max_threads
     )
 
     add_validity_mask_task = AddValidityMaskTask(mask_name='IS_VALID')
-    linear_interpolation_task = LinearInterpolationTask(
-        (FeatureType.DATA, 'L2A_BANDS'),
-        mask_feature=(FeatureType.MASK, 'IS_VALID'),
-        resample_range=resample_range
-    )
     save_task = SaveTask(eopatches_dir, overwrite_permission=OverwritePermission.OVERWRITE_PATCH)
 
     workflow_nodes = linearly_connect_tasks(
         input_task,
         add_validity_mask_task,
-        linear_interpolation_task,
         save_task
     )
 
@@ -134,9 +124,8 @@ def compose_workflow_nodes(
 if __name__ == '__main__':
     pyrootutils.setup_root(__file__, project_root_env_var=True, dotenv=True, pythonpath=True)
 
-    maxcc = 0.1
-    time_interval = ('2017-08-15', '2017-08-27')
-    resample_range = ('2017-08-24',)
+    maxcc = 0.5
+    time_interval = ('2017-06-01', '2017-09-20')
     eopatches_dir = os.environ['EOPATCHES_DIR']
     max_threads = 3
 
@@ -145,7 +134,6 @@ if __name__ == '__main__':
         band_names=BAND_NAMES,
         maxcc=maxcc,
         time_interval=time_interval,
-        resample_range=resample_range,
         eopatches_dir=eopatches_dir,
         max_threads=max_threads
     )
@@ -154,12 +142,17 @@ if __name__ == '__main__':
 
     # for i, name in enumerate(os.listdir(eopatches_dir)):
     #     eopatch_path = os.path.join(eopatches_dir, name)
-        # eopatch_path = os.path.join(eopatches_dir, f"eopatch_{idx}")
-        # eopatch = EOPatch.load(eopatch_path, lazy_loading=True)
-
-        # ax = axs[i // 2][i % 2]
-        # ax.imshow(np.clip(eopatch.data["L2A_BANDS"][0][..., [3, 2, 1]] * 3.5, 0, 1))
-        # plt.imshow(np.clip(eopatch.data["L2A_BANDS"][0][..., [3, 2, 1]] * 3.5, 0, 1))
+    #     # eopatch_path = os.path.join(eopatches_dir, f"eopatch_{idx}")
+    #     eopatch = EOPatch.load(eopatch_path, lazy_loading=True)
+    #
+    #     # ax = axs[i // 2][i % 2]
+    #     # ax.imshow(np.clip(eopatch.data["L2A_BANDS"][0][..., [3, 2, 1]] * 3.5, 0, 1))
+    #     plt.subplot(1, 3, 1)
+    #     plt.imshow(np.clip(eopatch.data["L2A_BANDS"][2][..., [3, 2, 1]] * 3.5, 0, 1))
+    #     plt.subplot(1, 3, 2)
+    #     plt.imshow(eopatch.mask['CLM'][2])
+    #     plt.subplot(1, 3, 3)
+    #     plt.imshow(eopatch.mask['IS_DATA'][2])
         # ax.set_xticks([])
         # ax.set_yticks([])
         # ax.set_aspect("auto")

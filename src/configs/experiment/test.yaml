@@ -8,7 +8,7 @@ device: cpu
 band_names_to_take: [B04, B03, B02, B08, B11]
 to_take_ndvi: true
 scale_rgb_intensity: null
-mask_data: null
+mask_data: false
 
 save_top_k_checkpoints: 0
 save_last_checkpoint: false
@@ -28,12 +28,11 @@ model:
 
 loss:
   _target_: src.utils.composite_loss.CompositeLoss
+  use_street_mask: true
   losses:
     - _target_: torch.nn.MSELoss
-    - _target_: torchgeometry.losses.SSIM
-      window_size: 5
-      reduction: mean
-  weights: [0.9, 0.1]
+      reduction: none
+  weights: [1.]
 
 optimizer:
   _target_: torch.optim.Adam
@@ -42,27 +41,75 @@ optimizer:
 
 scheduler: null
 
-train_transform:
-  _target_: albumentations.Compose
-  transforms:
-    - _target_: albumentations.Normalize
-      mean: [ 0.485, 0.456, 0.406, 0.5, 0.5, 0.0 ]
-      std: [ 0.229, 0.224, 0.225, 1.0, 1.0, 1.0 ]
-      max_pixel_value: 1.
-    - _target_: albumentations.Flip
-      p: 0.75
-    - _target_: albumentations.RandomRotate90
-      p: 0.5
-    - _target_: albumentations.ShiftScaleRotate
-      shift_limit: 0.1
-      scale_limit: 0.
-      rotate_limit: 0
-      p: 0.9
+train_dataset:
+  _target_: src.data.eopatch_dataset.EOPatchDataset
+  eopatches_dir: ${oc.env:EOPATCHES_DIR}
+  split: 'train'
+  band_names_to_take: ${band_names_to_take}
+  to_take_ndvi: ${to_take_ndvi}
+  scale_rgb_intensity: false
+  mask_data: false
+  transform:
+    _target_: albumentations.Compose
+    transforms:
+      - _target_: albumentations.Flip
+        p: 0.75
+      - _target_: albumentations.RandomRotate90
+        p: 0.5
 
-val_transform:
-  _target_: albumentations.Compose
-  transforms:
-    - _target_: albumentations.Normalize
-      mean: [ 0.485, 0.456, 0.406, 0.5, 0.5, 0.0 ]
-      std: [ 0.229, 0.224, 0.225, 1.0, 1.0, 1.0 ]
-      max_pixel_value: 1.
+      - _target_: albumentations.OneOf
+        transforms:
+          - _target_: albumentations.ShiftScaleRotate
+            shift_limit: 0.1
+            scale_limit: 0.
+            rotate_limit: 0
+            border_mode: 4  # cv2.BORDER_REFLECT_101
+            p: 0.4
+
+          - _target_: albumentations.ShiftScaleRotate
+            shift_limit: 0.1
+            scale_limit: 0.
+            rotate_limit: 0
+            border_mode: 0  # cv2.BORDER_CONSTANT
+            value: 0
+            mask_value: 0
+            p: 0.2
+
+          - _target_: albumentations.ShiftScaleRotate
+            shift_limit: 0.2
+            scale_limit: 0.
+            rotate_limit: 0
+            border_mode: 3  # cv2.BORDER_WRAP
+            p: 0.4
+        p: 0.9
+
+      - _target_: albumentations.CoarseDropout
+        max_holes: 4
+        min_holes: 1
+        max_width: 24
+        max_height: 24
+        min_width: 4
+        min_height: 4
+        fill_value: 0
+        mask_fill_value: 0
+
+      - _target_: albumentations.Normalize
+        mean: [ 0.485, 0.456, 0.406, 0.5, 0.5, 0.0 ]
+        std: [ 0.229, 0.224, 0.225, 1.0, 1.0, 1.0 ]
+        max_pixel_value: 1.
+
+val_dataset:
+  _target_: src.data.eopatch_dataset.EOPatchDataset
+  eopatches_dir: ${oc.env:EOPATCHES_DIR}
+  split: 'val'
+  band_names_to_take: ${band_names_to_take}
+  to_take_ndvi: ${to_take_ndvi}
+  scale_rgb_intensity: false
+  mask_data: false
+  transform:
+    _target_: albumentations.Compose
+    transforms:
+      - _target_: albumentations.Normalize
+        mean: [ 0.485, 0.456, 0.406, 0.5, 0.5, 0.0 ]
+        std: [ 0.229, 0.224, 0.225, 1.0, 1.0, 1.0 ]
+        max_pixel_value: 1.
