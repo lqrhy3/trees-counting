@@ -180,9 +180,10 @@ def run(cfg):
 
                 for i in range(len(val_loader)):
                     val_batch = next(val_loader_iterator)
+                    val_batch = move_batch_to_device(val_batch, device)
                     val_inputs, val_targets = (
-                        val_batch['data'].to(device),
-                        val_batch['density_map'].to(device),
+                        val_batch['data'],
+                        val_batch['density_map'],
                     )
 
                     val_outputs = model(val_inputs)
@@ -190,7 +191,7 @@ def run(cfg):
                         val_outputs *= val_batch['street_mask']
 
                     val_pred_tree_counts = val_outputs.sum(dim=(1, 2, 3))
-                    val_tgt_tree_counts = val_batch['tree_count'].to(device)
+                    val_tgt_tree_counts = val_batch['tree_count']
                     val_composite_metric(val_outputs, val_targets, val_pred_tree_counts, val_tgt_tree_counts)
                     wandb_logger.log_prediction_as_image('image/val', val_outputs, val_pred_tree_counts, val_batch)
 

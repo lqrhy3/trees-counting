@@ -1,5 +1,6 @@
 from typing import List, Optional, Union, Dict
 
+import torch
 from torch import nn, Tensor
 
 
@@ -24,8 +25,10 @@ class CompositeLoss(nn.Module):
         total_loss_value = 0.
         for weight, loss in zip(self.weights, self.losses):
             loss_value = loss(outputs, targets)
+            numel = loss_value.numel()
             if street_mask is not None:
                 loss_value *= street_mask
-            total_loss_value += weight * loss_value.sum()
+                numel = torch.count_nonzero(street_mask)
+            total_loss_value += weight * loss_value.sum() / numel
 
         return total_loss_value
