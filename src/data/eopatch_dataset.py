@@ -68,9 +68,6 @@ class EOPatchDataset(Dataset):
             density_map *= self.scale_density
 
         street_mask = eopatch.mask_timeless['STREET_MASK']  # [H, W, 1]
-        if self.mask_data:
-            data *= street_mask
-
         del eopatch
 
         if self.transform is not None:
@@ -78,6 +75,9 @@ class EOPatchDataset(Dataset):
             data = transformed['image']
             density_map = transformed['masks'][0]
             street_mask = transformed['masks'][1]
+
+        if self.mask_data:
+            data *= street_mask
 
         tree_count = density_map.sum()
 
