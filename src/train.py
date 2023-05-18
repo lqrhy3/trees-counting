@@ -79,7 +79,8 @@ def run(cfg):
     optimizer_partial = hydra.utils.instantiate(cfg['optimizer'])
     optimizer = optimizer_partial(model.parameters())
 
-    scheduler = hydra.utils.instantiate(cfg['scheduler'])
+    scheduler_partial = hydra.utils.instantiate(cfg['scheduler'])
+    scheduler = scheduler_partial(optimizer)
 
     loss_function = hydra.utils.instantiate(cfg['loss'])
 
@@ -139,6 +140,8 @@ def run(cfg):
             loss = loss_function(outputs, batch)
             loss.backward()
             optimizer.step()
+            if scheduler is not None:
+                scheduler.step()
 
             if cfg['loss'].get('use_street_mask'):
                 outputs = outputs.detach() * batch['street_mask']
@@ -157,9 +160,6 @@ def run(cfg):
             if (epoch + 1) % val_interval == 0:
                 if len(train_loader) - step < num_images_to_log // batch_size + 1:
                     wandb_logger.log_prediction_as_image('image/train', outputs, pred_tree_counts, batch)
-
-        if scheduler is not None:
-            scheduler.step()
 
         epoch_loss /= step
         density_metric_values, tree_count_metric_values = train_composite_metric.compute()
