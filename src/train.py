@@ -80,7 +80,9 @@ def run(cfg):
     optimizer = optimizer_partial(model.parameters())
 
     scheduler_partial = hydra.utils.instantiate(cfg['scheduler'])
-    scheduler = scheduler_partial(optimizer)
+    scheduler = None
+    if scheduler_partial:
+        scheduler = scheduler_partial(optimizer)
 
     loss_function = hydra.utils.instantiate(cfg['loss'])
 
