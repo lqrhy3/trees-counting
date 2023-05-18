@@ -21,6 +21,7 @@ model:
   encoder_depth: 4
   encoder_weights: imagenet
   in_channels: 6
+  decoder_channels: [128, 64, 32, 16]
   activation:
     _target_: src.utils.misc.get_class
     obj:
