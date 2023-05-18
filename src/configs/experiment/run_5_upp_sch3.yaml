@@ -1,5 +1,5 @@
 num_epochs: 3000
-val_interval: 100
+val_interval: 1
 batch_size: 64
 num_workers: 8
 pin_memory: true
@@ -10,10 +10,10 @@ to_take_ndvi: true
 scale_rgb_intensity: null
 mask_data: true
 
-save_top_k_checkpoints: 5
-save_last_checkpoint: true
+save_top_k_checkpoints: 0
+save_last_checkpoint: false
 
-num_images_to_log: 10
+num_images_to_log: 0
 
 model:
   _target_: segmentation_models_pytorch.UnetPlusPlus
@@ -48,6 +48,8 @@ scheduler:
   total_steps: 10000
   div_factor: 10000000
   pct_start: 0.625
+  cycle_momentum: false
+  anneal_strategy: linear
 
 
 train_dataset:
