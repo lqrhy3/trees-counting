@@ -44,9 +44,9 @@ optimizer:
 scheduler:
   _target_: torch.optim.lr_scheduler.OneCycleLR
   _partial_: true
-  max_lr: 0.3
+  max_lr: 3
   total_steps: 3000
-  div_factor: 1000000
+  div_factor: 10000000
   pct_start: 0.625
 
 
