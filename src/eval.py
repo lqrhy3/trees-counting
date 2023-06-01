@@ -30,7 +30,7 @@ pyrootutils.setup_root(
 )
 
 
-def main(config_name: str = 'eval.yaml'):
+def main(config_name: str = 'run_5_upp.yaml'):
     cfg_pth = os.path.join(os.environ['PROJECT_ROOT'], 'src', 'configs', 'evaluation', config_name)
     cfg = OmegaConf.load(cfg_pth)
     cfg = OmegaConf.to_container(cfg, resolve=True)
