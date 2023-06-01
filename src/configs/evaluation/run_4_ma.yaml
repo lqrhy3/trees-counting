@@ -1,4 +1,0 @@
-artefacts_dir: /home/lqrhy3/PycharmProjects/trees-counting/artefacts/run_4_ma
-checkpoint_name: best_epoch_1399.pth
-device: cpu
-pin_memory: false

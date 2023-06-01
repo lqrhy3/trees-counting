@@ -14,8 +14,9 @@ class CompositeMetric:
             density_metric_values[metric_name] = metric_object(outputs, targets).item()
 
         tree_count_metric_values = dict()
-        for metric_name, metric_object in self.tree_count_metrics.items():
-            tree_count_metric_values[metric_name] = metric_object(pred_counts, tgt_counts).item()
+        if tgt_counts > 10:
+            for metric_name, metric_object in self.tree_count_metrics.items():
+                tree_count_metric_values[metric_name] = metric_object(pred_counts, tgt_counts).item()
 
         return density_metric_values, tree_count_metric_values
 

@@ -324,3 +324,4 @@ cython_debug/
 test.py
 /src/data/*-report-*
 setup.sh
+/visualizations/

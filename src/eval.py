@@ -20,17 +20,17 @@ from src.utils.misc import seed_everything, load_checkpoint, denormalize_imagene
 
 MAX_DENSITY = 1.
 
+pyrootutils.setup_root(
+    __file__,
+    indicator='.project-root',
+    project_root_env_var=True,
+    dotenv=True,
+    pythonpath=True,
+    cwd=False
+)
+
 
 def main(config_name: str = 'eval.yaml'):
-    pyrootutils.setup_root(
-        __file__,
-        indicator='.project-root',
-        project_root_env_var=True,
-        dotenv=True,
-        pythonpath=True,
-        cwd=False
-    )
-
     cfg_pth = os.path.join(os.environ['PROJECT_ROOT'], 'src', 'configs', 'evaluation', config_name)
     cfg = OmegaConf.load(cfg_pth)
     cfg = OmegaConf.to_container(cfg, resolve=True)
@@ -68,6 +68,7 @@ def main(config_name: str = 'eval.yaml'):
         logging.info('Dataset will be derived from train config.')
         assert train_cfg is not None
         cfg['dataset'] = train_cfg['val_dataset']
+        cfg['dataset']['eopatches_dir'] = os.environ['EOPATCHES_DIR']
 
     seed_everything(42)
     run(cfg)
@@ -100,12 +101,12 @@ def run(cfg: Union[Dict, DictConfig]):
 
     with torch.no_grad():
         for i, batch in enumerate(dataloader):
-            # if i > 5:
-            #     break
             eopatch_name = dataset.eopatch_names[i]
             batch = move_batch_to_device(batch, device)
             data, targets = batch['data'], batch['density_map']
             outputs = model(data)
+
+            outputs = torch.where(outputs > 0.01, outputs, 0)
 
             tgt_num_trees = batch['tree_count']
             pred_num_trees = outputs.sum(dim=(1, 2, 3))
@@ -132,6 +133,8 @@ def plot_and_save_prediction(batch, outputs, tgt_count, pred_count, save_dir, eo
     data = torch.clip(denormalize_imagenet(data) * 2.5, 0, 1)
     data = data.permute(1, 2, 0).numpy()
 
+    unmasked_data = np.clip((batch['unmasked_data'].cpu()[0][:3] * 2.5).permute(1, 2, 0).numpy(), 0, 1)
+
     targets = batch['density_map'].cpu()
     targets = targets[0].permute(1, 2, 0).numpy()
     outputs = outputs.cpu()
@@ -139,28 +142,32 @@ def plot_and_save_prediction(batch, outputs, tgt_count, pred_count, save_dir, eo
 
     street_mask = batch['street_mask'].cpu()[0].permute(1, 2, 0).numpy()
 
-    fig, axs = plt.subplots(1, 4)
+    fig, axs = plt.subplots(1, 3)
     axs[0].imshow(outputs, vmin=0., vmax=MAX_DENSITY)
     axs[0].set_title(f'predicted count: {pred_count:.1f}', fontsize=8)
     axs[0].set_axis_off()
 
-    axs[1].imshow(data)
+    axs[1].imshow(unmasked_data)
     axs[1].set_title('data', fontsize=8)
     axs[1].set_axis_off()
 
     axs[2].imshow(targets, vmin=0., vmax=MAX_DENSITY)
     axs[2].set_title(f'target count: {tgt_count:.1f}', fontsize=8)
     axs[2].set_axis_off()
+    #
+    # axs[3].imshow(street_mask)
+    # axs[3].set_title('street map')
+    # axs[3].set_axis_off()
+    #
+    # axs[4].imshow(data)
+    # axs[4].set_title('masked_data', fontsize=8)
+    # axs[4].set_axis_off()
 
-    axs[3].imshow(street_mask)
-    axs[3].set_title('street map')
-    axs[3].set_axis_off()
     plt.tight_layout()
     plt.savefig(os.path.join(save_dir, f'{eopatch_name}.png'), bbox_inches='tight')
     if show:
         plt.show()
-    else:
-        plt.close(fig)
+    plt.close(fig)
 
 
 if __name__ == '__main__':

@@ -78,6 +78,7 @@ class EOPatchDataset(Dataset):
             density_map = transformed['masks'][0]
             street_mask = transformed['masks'][1]
 
+        unmasked_data = data.copy()
         if self.mask_data:
             data *= street_mask
 
@@ -92,11 +93,14 @@ class EOPatchDataset(Dataset):
         tree_count = torch.tensor(tree_count, dtype=torch.float32)
         street_mask = torch.tensor(street_mask, dtype=torch.bool).permute(2, 0, 1)
 
+        unmasked_data = torch.tensor(unmasked_data, dtype=torch.float32).permute(2, 0, 1)
+
         sample = dict()
         sample['data'] = data
         sample['density_map'] = density_map
         sample['tree_count'] = tree_count
         sample['street_mask'] = street_mask
+        sample['unmasked_data'] = unmasked_data
         return sample
 
     def __len__(self):
@@ -109,11 +113,12 @@ if __name__ == '__main__':
     import hydra
 
     load_dotenv()
-    cfg = OmegaConf.load('../configs/experiment/run_5_yama.yaml')
+    cfg = OmegaConf.load('../configs/experiment/test.yaml')
+    cfg = OmegaConf.to_container(cfg, resolve=True)
     d = hydra.utils.instantiate(cfg['train_dataset'])
 
-    # for i in [0, 0, 0, 0, 0, 0, 0]:
-    for i in range(10):
+    for i in [0, 0, 0, 0, 0, 0, 0]:
+    # for i in range(10):
         sample = d[i]
         data = sample['data']
         # print(data[3].min(), data[3].mean(), data[3].max())

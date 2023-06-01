@@ -10,8 +10,11 @@ from eolearn.features import LinearInterpolationTask
 from matplotlib import pyplot as plt
 from sentinelhub import UtmZoneSplitter, DataCollection, get_area_dates, MosaickingOrder
 from sentinelsat import read_geojson
+from shapely import Polygon
 from shapely.geometry import shape
 from eolearn.io import SentinelHubInputTask
+
+from src.utils.misc import plot_and_save_bbox_splits
 
 RESOLUTION = 10
 BAND_NAMES = ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B11", "B12"]
@@ -59,6 +62,8 @@ def main(
     save_node = workflow_nodes[-1]
     execution_args = []
     for idx, bbox in enumerate(bboxes):
+        # if idx not in [100, 101, 109, 110]:
+        #     continue
         execution_args.append(
             {
                 input_node: {'bbox': bbox, 'time_interval': time_interval},
@@ -111,7 +116,6 @@ def compose_workflow_nodes(
 
     add_validity_mask_task = AddValidityMaskTask(mask_name='IS_VALID')
     save_task = SaveTask(eopatches_dir, overwrite_permission=OverwritePermission.OVERWRITE_PATCH)
-
     workflow_nodes = linearly_connect_tasks(
         input_task,
         add_validity_mask_task,
