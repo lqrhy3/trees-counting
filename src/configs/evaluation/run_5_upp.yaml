@@ -1,0 +1,4 @@
+artefacts_dir: /home/lqrhy3/PycharmProjects/trees-counting/artefacts/run_5_upp
+checkpoint_name: best_epoch_0899_value_0.0127.pth
+device: cpu
+pin_memory: false
